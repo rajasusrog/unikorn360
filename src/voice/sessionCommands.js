@@ -1,7 +1,8 @@
-import { createVoiceControl } from './control.js';
+import { createVoiceControl, voiceStatusLabel } from './control.js';
 import { createVoiceSession } from './session.js';
 import { VoiceCardControls } from './voiceCard.js';
 import { PointerReticle } from './pointerReticle.js';
+import { t } from '../i18n/index.js';
 
 function createDefaultReticle(pointer) {
   const element = pointer?.element;
@@ -52,8 +53,9 @@ export function createVoiceCommands({
   if (ui.tierButton) ui.tierButton.hidden = !capabilities.costControls;
   if (ui.costValue) ui.costValue.hidden = !capabilities.costControls;
   if (!capabilities.pushToTalk) {
-    ui.button.setAttribute('aria-label', 'Toggle voice control');
-    if (ui.helpDetail) ui.helpDetail.textContent = 'Activate to toggle voice';
+    ui.button.setAttribute('aria-label', t('Toggle voice control'));
+    if (ui.helpDetail)
+      ui.helpDetail.textContent = t('Activate to toggle voice');
   }
   // Retain the existing controller's inspection surface for browser tools.
   const controls = adapter.controller || session;
@@ -61,15 +63,21 @@ export function createVoiceCommands({
   const updateStatus = session.subscribe((event) => {
     if (event.type !== 'state') return;
     ui.root.dataset.status = event.state;
-    ui.status.textContent =
-      event.state === 'idle' ? 'OFF' : event.state.toUpperCase();
+    // Session states are machine values (dataset.status); only the label
+    // shown for them is translated. Unknown states show as they are.
+    ui.status.textContent = voiceStatusLabel(event.state);
+    // The session reports 'Voice off' in English: it is portable and has no
+    // locale, so that detail shows as the idle label. Other details are
+    // provider messages and show as they arrive.
+    const idle = event.state === 'idle';
+    const detail = event.detail === 'Voice off' ? '' : event.detail;
     ui.detail.textContent =
-      event.detail || (event.state === 'idle' ? 'Voice off' : 'Voice active');
+      detail || (idle ? t('Voice off') : t('Voice active'));
     ui.button.setAttribute('aria-pressed', String(session.isActive()));
     if (ui.errorDetail)
       ui.errorDetail.textContent =
         event.state === 'error'
-          ? event.detail || 'Voice could not be started.'
+          ? event.detail || t('Voice could not be started.')
           : '';
     if (event.state === 'error') ui.root.classList?.remove('error-dismissed');
   });

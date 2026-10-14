@@ -16,9 +16,14 @@
  *
  * Builders are small pure functions keyed by tool name. Tools without one are
  * returned unchanged.
+ *
+ * Only `display` and the plan/progress labels are interface text, translated
+ * with t(). `say`, `identityLine` and the progress lines are not shown: they go
+ * to the voice model to be spoken, so they stay as written.
  */
 
 import { analystHeadline } from './resultDisplay.js';
+import { formatNumber, msg, t, tn } from '../i18n/index.js';
 
 const LAYER_NOUNS = Object.freeze({
   flights: 'aircraft',
@@ -53,11 +58,24 @@ function listPhrase(items) {
   return `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
 }
 
-function feet(meters) {
+function feetRounded(meters) {
   const value = Number(meters);
-  if (!Number.isFinite(value)) return null;
-  const rounded = Math.round((value * 3.28084) / 100) * 100;
+  return Number.isFinite(value)
+    ? Math.round((value * 3.28084) / 100) * 100
+    : null;
+}
+
+function feet(meters) {
+  const rounded = feetRounded(meters);
+  if (rounded === null) return null;
   return `${rounded.toLocaleString('en-US')} feet`;
+}
+
+/** The card's altitude, in the active language. */
+function shownFeet(meters) {
+  const rounded = feetRounded(meters);
+  if (rounded === null) return null;
+  return t('{value} feet', { value: formatNumber(rounded) });
 }
 
 function kilometers(km) {
@@ -76,9 +94,98 @@ function feedTag(state) {
   return MATERIAL_FEED_TAGS[state] || null;
 }
 
+/** Feed states as the card shows them; the state values stay English. */
+const FEED_STATE_LABELS = Object.freeze({
+  nominal: msg('nominal'),
+  loading: msg('loading'),
+  degraded: msg('degraded'),
+  stale: msg('stale'),
+  partial: msg('partial'),
+  fallback: msg('fallback'),
+  unavailable: msg('unavailable'),
+});
+
+function feedStateLabel(state) {
+  const key = FEED_STATE_LABELS[state];
+  return key ? t(key) : state;
+}
+
 /** A feed chip only when the state is worth seeing; nominal is the default. */
 function feedChips(state) {
-  return state && state !== 'nominal' ? [{ label: state }] : [];
+  return state && state !== 'nominal' ? [{ label: feedStateLabel(state) }] : [];
+}
+
+/** '{label} on' / '{label} off' as the card shows it. */
+function switchedTitle(label, on) {
+  return on ? t('{label} on', { label }) : t('{label} off', { label });
+}
+
+// Card titles name the layer's things in whole phrases, so each language can
+// inflect the noun; the English matches LAYER_NOUNS.
+function frameTitle(layerId) {
+  switch (layerId) {
+    case 'flights':
+      return t('Frame aircraft');
+    case 'military':
+      return t('Frame military aircraft');
+    case 'ais-live-vessels':
+      return t('Frame ships');
+    case 'satellites':
+      return t('Frame satellites');
+    default:
+      return t('Frame contacts');
+  }
+}
+
+function inFrameTitle(layerId, count) {
+  switch (layerId) {
+    case 'flights':
+      return tn(
+        count,
+        '{count} aircraft in frame',
+        '{count} aircraft in frame',
+      );
+    case 'military':
+      return tn(
+        count,
+        '{count} military aircraft in frame',
+        '{count} military aircraft in frame',
+      );
+    case 'ais-live-vessels':
+      return tn(count, '{count} ships in frame', '{count} ships in frame');
+    case 'satellites':
+      return tn(
+        count,
+        '{count} satellites in frame',
+        '{count} satellites in frame',
+      );
+    default:
+      return tn(
+        count,
+        '{count} contacts in frame',
+        '{count} contacts in frame',
+      );
+  }
+}
+
+function nearestTitle(layerId) {
+  switch (layerId) {
+    case 'military':
+      return t('Nearest military aircraft');
+    case 'ais-live-vessels':
+      return t('Nearest ships');
+    case 'satellites':
+      return t('Nearest satellites');
+    default:
+      return t('Nearest aircraft');
+  }
+}
+
+/** Two shown items joined, or the one item. */
+function shownPair(items) {
+  return items.length === 2
+    ? t('{first} and {second}', { first: items[0], second: items[1] })
+    : items[0] || '';
 }
 
 /** Ids such as `austin` or `local-firms` read as names on screen. */
@@ -117,7 +224,7 @@ function setLayerVisibility(result, args = {}) {
   return {
     say,
     display: {
-      title: `${label} ${on ? 'on' : 'off'}`,
+      title: switchedTitle(label, on),
       chips: on ? feedChips(result.feedState) : [],
       sources: result.source ? [{ label: result.source }] : [],
     },
@@ -138,7 +245,11 @@ function flyToLocation(result) {
     display: {
       title: label,
       lines: result.rangeM
-        ? [`Camera range ${kilometers(result.rangeM / 1000)}`]
+        ? [
+            t('Camera range {range}', {
+              range: kilometers(result.rangeM / 1000),
+            }),
+          ]
         : [],
     },
   };
@@ -162,7 +273,7 @@ function frameOverhead(result) {
     return {
       say,
       display: {
-        title: `Frame ${noun}`,
+        title: frameTitle(result?.layerId),
         lines: [result?.error].filter(Boolean),
       },
     };
@@ -181,12 +292,13 @@ function frameOverhead(result) {
   return {
     say: sentence(`Framed ${countText} ${noun} within ${radius}`),
     display: {
-      title: `${count} ${noun} in frame`,
+      title: inFrameTitle(result.layerId, count),
       lines: [
-        `Within ${radius} of the view`,
-        result.detectionEnabled ? 'Labels on' : null,
+        t('Within {radius} of the view', { radius }),
+        result.detectionEnabled ? t('Labels on') : null,
       ].filter(Boolean),
-      notes: count >= 80 ? ['Framing uses the nearest 80 loaded contacts'] : [],
+      notes:
+        count >= 80 ? [t('Framing uses the nearest 80 loaded contacts')] : [],
     },
     referents,
   };
@@ -212,7 +324,7 @@ function selectNearestAircraft(result) {
     return {
       say,
       display: {
-        title: `Nearest ${noun}`,
+        title: nearestTitle(result?.layerId),
         lines: [result?.error].filter(Boolean),
         chips: feedChips(feed.state),
         sources,
@@ -239,8 +351,14 @@ function selectNearestAircraft(result) {
     display: {
       title: name,
       lines: [
-        distance ? `${distance} from ${location}` : null,
-        altitude ? `Altitude ${altitude}` : null,
+        distance
+          ? t('{distance} from {location}', { distance, location })
+          : null,
+        altitude
+          ? t('Altitude {altitude}', {
+              altitude: shownFeet(aircraft.altitudeM),
+            })
+          : null,
       ].filter(Boolean),
       chips: feedChips(feed.state),
       sources,
@@ -251,14 +369,30 @@ function selectNearestAircraft(result) {
   };
 }
 
-function routeText(properties) {
+const SPOKEN_ROUTE = Object.freeze({
+  between: (origin, destination) => `${origin} to ${destination}`,
+  from: (origin) => `from ${origin}`,
+  to: (destination) => `to ${destination}`,
+});
+
+const SHOWN_ROUTE = Object.freeze({
+  between: (origin, destination) =>
+    t('{origin} to {destination}', { origin, destination }),
+  from: (origin) => t('from {origin}', { origin }),
+  to: (destination) => t('to {destination}', { destination }),
+});
+
+function routeText(properties, words = SPOKEN_ROUTE) {
   const route = spokenLabel(properties.route || '', 40);
-  if (route) return route.replace(/\s*(?:-|→|>)\s*/g, ' to ');
+  if (route)
+    return route
+      .split(/\s*(?:-|→|>)\s*/)
+      .reduce((origin, destination) => words.between(origin, destination));
   const origin = spokenLabel(properties.routeOrigin || '', 12);
   const destination = spokenLabel(properties.routeDestination || '', 12);
-  if (origin && destination) return `${origin} to ${destination}`;
-  if (origin) return `from ${origin}`;
-  if (destination) return `to ${destination}`;
+  if (origin && destination) return words.between(origin, destination);
+  if (origin) return words.from(origin);
+  if (destination) return words.to(destination);
   return null;
 }
 
@@ -301,9 +435,13 @@ function getEntityContext(result) {
       title,
       lines: [
         properties.registration
-          ? `Registration ${spokenLabel(properties.registration, 16)}`
+          ? t('Registration {registration}', {
+              registration: spokenLabel(properties.registration, 16),
+            })
           : null,
-        route ? `Route ${route}` : null,
+        route
+          ? t('Route {route}', { route: routeText(properties, SHOWN_ROUTE) })
+          : null,
       ].filter(Boolean),
       sources: selected.source ? [{ label: selected.source }] : [],
     },
@@ -350,10 +488,10 @@ function getCurrentViewState(result) {
       .map((part) => sentence(part[0].toUpperCase() + part.slice(1)))
       .join(' '),
     display: {
-      title: 'View state',
+      title: t('View state'),
       lines: enabled.map(
         (layer) =>
-          `${spokenLabel(layer.name || layer.id, 32)} · ${layer.count ?? 0} · ${layer.feedState || 'nominal'}`,
+          `${spokenLabel(layer.name || layer.id, 32)} · ${layer.count ?? 0} · ${feedStateLabel(layer.feedState || 'nominal')}`,
       ),
     },
     schedule: 'silent',
@@ -387,13 +525,15 @@ function annotateMap(result) {
     say: parts.length ? parts.join(' ') : null,
     display: {
       title: result?.ok
-        ? `Marked ${drawn.length} ${drawn.length === 1 ? 'place' : 'places'}`
-        : 'Nothing marked',
+        ? tn(drawn.length, 'Marked {count} place', 'Marked {count} places')
+        : t('Nothing marked'),
       // The numbered referents list the marks; lines stay for extra facts.
       lines: [],
       notes: [
-        ...(failed.length ? [`Not found: ${failed.join(', ')}`] : []),
-        ...(result?.outlinePending ? ['Tracing outlines'] : []),
+        ...(failed.length
+          ? [t('Not found: {places}', { places: failed.join(', ') })]
+          : []),
+        ...(result?.outlinePending ? [t('Tracing outlines')] : []),
       ],
     },
     referents,
@@ -492,22 +632,36 @@ export function planStepLabel(name, args = {}) {
   switch (name) {
     case 'annotate_map': {
       const targets = annotationTargets(args);
-      return targets.length
-        ? `Mark ${listPhrase(targets.slice(0, 2))}${targets.length > 2 ? ` +${targets.length - 2}` : ''}`
-        : 'Mark the map';
+      if (!targets.length) return t('Mark the map');
+      const shown = shownPair(targets.slice(0, 2));
+      return targets.length > 2
+        ? t('Mark {targets} +{more}', {
+            targets: shown,
+            more: targets.length - 2,
+          })
+        : t('Mark {targets}', { targets: shown });
     }
     case 'fly_to_location':
-      return `Fly to ${displayName(args.query || args.locationId || 'location', 40)}`;
+      return t('Fly to {place}', {
+        place: displayName(args.query || args.locationId || 'location', 40),
+      });
     case 'select_nearest_aircraft':
-      return `Nearest aircraft to ${displayName(args.locationQuery || args.locationId || 'here', 32)}`;
+      return t('Nearest aircraft to {place}', {
+        place: displayName(args.locationQuery || args.locationId || 'here', 32),
+      });
     case 'set_layer_visibility':
-      return `${displayName(args.layerId || 'Layer', 32)} ${args.enabled === false ? 'off' : 'on'}`;
+      return switchedTitle(
+        displayName(args.layerId || 'Layer', 32),
+        args.enabled !== false,
+      );
     case 'get_entity_context':
-      return 'Read the view';
+      return t('Read the view');
     case 'get_current_view_state':
-      return 'Check view state';
+      return t('Check view state');
     case 'frame_overhead':
-      return `Frame ${spokenLabel(args.target || 'flights', 24)}`;
+      return t('Frame {target}', {
+        target: spokenLabel(args.target || 'flights', 24),
+      });
     default:
       return spokenLabel(String(name || 'Action').replace(/_/g, ' '), 40);
   }
@@ -532,18 +686,22 @@ export function narrationLabel(name, args = {}) {
 
 /** On-screen labels for progress steps. */
 const STEP_LABELS = Object.freeze({
-  resolve: 'Finding places',
-  outline: 'Tracing outline',
-  search: 'Looking up place',
-  fly: 'Flying',
-  layer: 'Turning on layer',
-  refresh: 'Loading aircraft',
-  nearest: 'Picking nearest',
+  resolve: msg('Finding places'),
+  outline: msg('Tracing outline'),
+  search: msg('Looking up place'),
+  fly: msg('Flying'),
+  layer: msg('Turning on layer'),
+  refresh: msg('Loading aircraft'),
+  nearest: msg('Picking nearest'),
 });
 
 /** On-screen label for a progress step. */
 export function progressStepLabel(step, label) {
-  const base = STEP_LABELS[step] || spokenLabel(step || 'Working', 24);
+  const base = STEP_LABELS[step]
+    ? t(STEP_LABELS[step])
+    : step
+      ? spokenLabel(step, 24)
+      : t('Working');
   return label ? `${base}: ${spokenLabel(label, 32)}` : base;
 }
 

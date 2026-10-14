@@ -3049,6 +3049,33 @@ test:track` 43 tracking invariants · headless QA harnesses under
 > attribution 18/18). New modules: `src/data/{motionModel,aircraftMeta,aircraftClass,aircraftIcons,issPass,routePlausible,dataCredits}.js`.
 > The live runtime now declares 30 voice tools; the 17→20 count above is retained only as milestone history.
 
+### Interface localization (October 2026)
+
+Shipped locales: **en** (source and fallback), **es** and **ru**. The code lives in
+`src/i18n/`. How to mark UI text: [`docs/I18N.md`](./I18N.md); translator workflow:
+[`docs/TRANSLATORS.md`](./TRANSLATORS.md).
+
+- **Keys are the English text.** `t('Save keys')`, `tn(count, '{count} camera',
+  '{count} cameras')`, and `msg('Live Flights')` for text stored in data and
+  translated later. Markup opts in with `data-i18n` (element text) and
+  `data-i18n-title` / `-aria-label` / `-placeholder` (that attribute's English
+  value). English has no catalog; every other locale is
+  `src/i18n/locales/<code>.json`, and a missing entry falls back to English.
+- **Locale choice.** `?lang=` (one-shot) → stored choice (`gev:locale:v1`) →
+  `navigator.languages` → English. The language switch in the Visual Presets dock
+  stores the choice and reloads, so nothing re-renders live.
+- **Gate.** `npm run i18n` (and `src/i18n/catalog.test.mjs` under `npm test`)
+  extracts every message and fails on missing, unused, placeholder-mismatched or
+  wrongly-shaped plural entries.
+- **Not translated by design:** layer ids, share-link and hash parameters, API
+  fields, voice tool schemas, provider names, feed data (callsigns, vessel and
+  station names) and attribution.
+- **Unmarked text.** The same check lists UI text that is not marked at all
+  (markup without `data-i18n*`, literals reaching the page without `t`/`tn`/`msg`)
+  and fails on it. Text kept on purpose says why: `translate="no"`,
+  `data-i18n-runtime`, or `// i18n-ignore: <reason>`. `src/tools/` is skipped:
+  it writes for AI clients, not the page.
+
 ## Canonical Docs Order
 
 Use docs in this order when details conflict:

@@ -239,7 +239,10 @@ export function createTracking({ state: layerState, services, parts, source }) {
         name,
         operator: '',
         noradId: String(noradId),
-        class: satelliteClassLabel(sat.group, { isIss: noradId === ISS_NORAD }),
+        class: satelliteClassLabel(sat.group, {
+          isIss: noradId === ISS_NORAD,
+          localize: false,
+        }),
         altitude:
           altitudeKm === null ? '' : `${altitudeKm.toLocaleString('en-US')} km`,
       },

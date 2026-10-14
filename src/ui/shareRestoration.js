@@ -1,6 +1,7 @@
 import { LayerStateCoordinator } from '../data/layerStateCoordinator.js';
 import { stampInitialShareGesture } from '../navigationPolicy.js';
 import { canPresentDeferredStatusNotice } from '../loadingFeedback.js';
+import { t } from '../i18n/index.js';
 import { UiLifetime } from './uiLifetime.js';
 
 /** Own initial share restoration, durable layer state and restoration notices. */
@@ -188,9 +189,13 @@ export class ShareRestoration {
     if (result.classification === 'pending') {
       this._shareTrackingNoticeGeneration += 1;
       this._shareTrackingAcquiringKey = trackingKey;
-      this.showStatus('ACQUIRING', {
+      this.showStatus(t('ACQUIRING'), {
         state: 'acquiring',
-        detail: `SHARED ${String(result.label || 'SUBJECT').toUpperCase()}`,
+        detail: t('SHARED {subject}', {
+          subject: String(
+            result.label ? t(result.label) : t('subject'),
+          ).toUpperCase(),
+        }),
         persistent: true,
       });
       return;
@@ -214,13 +219,15 @@ export class ShareRestoration {
     const noticeGeneration = ownsAcquiringNotice
       ? this._shareTrackingNoticeGeneration
       : ++this._shareTrackingNoticeGeneration;
-    const subject = result.label || 'entity';
+    const subject = result.label ? t(result.label) : t('entity');
     const message =
       result.classification === 'expired'
-        ? `Shared ${subject} follow expired`
+        ? t('Shared {subject} follow expired', { subject })
         : result.classification === 'source-unavailable'
-          ? `Shared ${subject} could not be restored — feed unavailable`
-          : `Shared ${subject} is unavailable`;
+          ? t('Shared {subject} could not be restored — feed unavailable', {
+              subject,
+            })
+          : t('Shared {subject} is unavailable', { subject });
     const showAfterStartupCover = () => {
       this._lifetime.frame(() => {
         if (

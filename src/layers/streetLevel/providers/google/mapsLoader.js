@@ -9,10 +9,13 @@ const READY_CALLBACK = '__gevGoogleMapsReady';
 const PAGE_LOAD = Symbol.for('gev.googleMapsLoad');
 
 /**
- * @param {{getApiKey: () => string|null|undefined, document?: Document, global?: object}} options
+ * @param {{getApiKey: () => string|null|undefined, getLanguage?: () => string|null|undefined, document?: Document, global?: object}} options
+ *   `getLanguage` names the UI language; Google's own controls (Terms,
+ *   Report a problem) follow it. English adds nothing, as before.
  */
 export function createMapsLoader({
   getApiKey,
+  getLanguage,
   document = globalThis.document,
   global = globalThis,
 }) {
@@ -53,12 +56,15 @@ export function createMapsLoader({
       };
       const script = document.createElement('script');
       script.async = true;
-      script.src = `${SCRIPT_ORIGIN}/maps/api/js?${new URLSearchParams({
+      const params = new URLSearchParams({
         key,
         v: 'weekly',
         loading: 'async',
         callback: READY_CALLBACK,
-      })}`;
+      });
+      const language = getLanguage?.();
+      if (language && language !== 'en') params.set('language', language);
+      script.src = `${SCRIPT_ORIGIN}/maps/api/js?${params}`;
       script.onerror = () => {
         if (global[PAGE_LOAD] === loading) delete global[PAGE_LOAD];
         script.remove();

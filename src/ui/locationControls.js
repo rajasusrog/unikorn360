@@ -1,5 +1,18 @@
 import { locationMiniStatus } from '../locationStatus.js';
+import { t } from '../i18n/index.js';
+
 const POI_KEYS = ['Q', 'W', 'E', 'R', 'T'];
+
+/**
+ * locationStatus.js sentinel outputs used as localized-rewrite triggers for
+ * the collapsed LOCATION mini-status. Built by calling the module with no
+ * real data, so the comparisons track that module's copy without restating
+ * English strings here. Resolved destinations (place names) stay verbatim.
+ */
+const LOCATION_MINI_EMPTY = Object.freeze(locationMiniStatus());
+const LOCATION_MINI_SEARCHED_PLACEHOLDER = Object.freeze(
+  locationMiniStatus({ searchedLabel: '·' }),
+);
 
 /** Location DOM, keyboard handling and pending row animation over supplied actions. */
 export class LocationControls {
@@ -133,8 +146,20 @@ export class LocationControls {
     if (this.destroyed || !this.elements.statusCity || !this.elements.statusPoi)
       return;
     const lines = locationMiniStatus(state);
-    this.elements.statusCity.textContent = lines.city;
-    this.elements.statusPoi.textContent = lines.poi;
+    // The initial/placeholder states get catalog keys at the writer so a
+    // non-English boot never leaks the English sentinels back over the
+    // localized static readout (resolved place names stay verbatim data).
+    this.elements.statusCity.textContent =
+      lines.city === LOCATION_MINI_EMPTY.city
+        ? t('📍 Location: --')
+        : lines.city;
+    if (lines.poi === LOCATION_MINI_EMPTY.poi) {
+      this.elements.statusPoi.textContent = t('Landmark: --');
+    } else if (lines.poi === LOCATION_MINI_SEARCHED_PLACEHOLDER.poi) {
+      this.elements.statusPoi.textContent = t('Searched location');
+    } else {
+      this.elements.statusPoi.textContent = lines.poi;
+    }
   }
   createOrbitIndicator() {
     if (this.destroyed) return null;
@@ -144,7 +169,7 @@ export class LocationControls {
       const icon = this.doc.createElement('span');
       icon.className = 'orbit-icon';
       icon.textContent = '↻';
-      this.orbitIndicator.append(icon, ' ORBIT');
+      this.orbitIndicator.append(icon, ` ${t('ORBIT')}`);
       this.doc.body.appendChild(this.orbitIndicator);
     }
     return this.orbitIndicator;

@@ -569,6 +569,9 @@ body.cockpit-mode:has(#left-panel-stack > .panel-collapsible:not(.collapsed))
   text-align: center;
   vertical-align: -0.08em;
 }
+.cockpit-roll-token.is-separator {
+  min-width: 0.3em;
+}
 .cockpit-roll-token.is-rolling {
   color: color-mix(in srgb, currentColor 92%, var(--cockpit-accent));
   text-shadow: 0 0 10px
@@ -1499,6 +1502,12 @@ body.cockpit-mode #view-switcher button {
 .cockpit-signal-header > div {
   display: grid;
   gap: 2px;
+  min-width: 0;
+}
+.cockpit-signal-kicker {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cockpit-signal-header strong {
   color: #fff;
@@ -1526,6 +1535,11 @@ body.cockpit-mode #view-switcher button {
   align-items: center;
   gap: 3px;
 }
+/* A longer translated state label widens the cycle button; the other
+   controls keep their size instead of being squeezed. */
+.cockpit-brief-actions > * {
+  flex-shrink: 0;
+}
 .cockpit-brief-actions button {
   display: grid;
   width: 23px;
@@ -1548,10 +1562,13 @@ body.cockpit-mode #view-switcher button {
   font-size: 14px;
 }
 #cockpit-brief-auto {
-  width: 50px;
+  width: auto;
+  min-width: 50px;
+  padding: 0 4px;
   color: rgba(244, 251, 255, 0.42);
   font: 700 6px/1 var(--font-mono);
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 #cockpit-brief-auto[aria-pressed='true'] {
   border-color: var(--cockpit-accent);
@@ -1857,13 +1874,19 @@ body.cockpit-mode #view-switcher button {
   letter-spacing: 0.1em;
 }
 .cockpit-signal-footer > span {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .cockpit-brief-tabs {
   display: flex;
+  flex: 0 0 auto;
   gap: 3px;
+}
+.cockpit-brief-tabs button {
+  white-space: nowrap;
 }
 .cockpit-brief-tabs button {
   padding: 2px 4px;

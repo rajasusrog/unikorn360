@@ -1,4 +1,5 @@
 import { COLORS as SHARED_COLORS, PROVIDER_COLORS } from '../../policy.js';
+import { msg } from '../../../../i18n/index.js';
 
 export { NEAREST_RADIUS_M } from '../../policy.js';
 
@@ -47,8 +48,8 @@ export const COVERAGE_TUNING = Object.freeze({
   viewRangePerHeight: 10,
   viewNearM: 1_000,
 });
-export const TOO_HIGH_HINT = 'zoom in to see KartaView coverage';
-export const NO_COVERAGE_HINT = 'no KartaView photos in view';
+export const TOO_HIGH_HINT = msg('zoom in to see KartaView coverage');
+export const NO_COVERAGE_HINT = msg('no KartaView photos in view');
 export const RATE_LIMITED_MESSAGE =
   'KartaView is rate-limiting requests — they resume on their own';
 

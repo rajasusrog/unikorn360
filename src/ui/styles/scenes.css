@@ -160,7 +160,18 @@
   padding: 6px 8px;
   font-family: var(--font-sans);
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   outline: none;
+}
+
+/* A translated action longer than its button wraps inside the button instead
+   of running past it. English labels fit on one line, so the English layout
+   is unchanged. */
+#scene-panel .scene-controls .scene-btn {
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .scene-btn {
@@ -453,4 +464,16 @@
 
 .director-sharing-dialog::backdrop {
   background: rgba(0, 8, 14, 0.65);
+}
+
+html:not([lang='en']) #scene-select {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+/* A translated scene name needs the width: the select takes its own row and
+   NEW / DELETE share the next one. */
+html:not([lang='en']) #scene-select {
+  flex: 1 1 100%;
 }

@@ -1,3 +1,4 @@
+import { formatUtcDayMonth, t } from '../i18n/index.js';
 import { createRailCards } from './railCards.js';
 import { createRailTimeline } from './railTimeline.js';
 
@@ -14,19 +15,25 @@ const ORDER = [
 const OBSERVED = new Set(ORDER.slice(2));
 const utc = (time) =>
   Number.isFinite(Date.parse(time))
-    ? `${new Date(time).toISOString().slice(5, 16).replace('T', ' ')} UTC`
-    : 'Unavailable';
+    ? `${formatUtcDayMonth(time)} ${new Date(time).toISOString().slice(11, 16)} UTC`
+    : t('Unavailable');
 const age = (time) => {
   const minutes = Math.max(
     0,
     Math.floor((Date.now() - Date.parse(time)) / 60_000),
   );
   return minutes >= 60
-    ? `${Math.floor(minutes / 60)}h ${minutes % 60}m ago`
-    : `${minutes}m ago`;
+    ? t('{hours}h {minutes}m ago', {
+        hours: Math.floor(minutes / 60),
+        minutes: minutes % 60,
+      })
+    : t('{minutes}m ago', { minutes });
 };
 const historyTime = (time) =>
-  `${utc(time).slice(6)} · ${Math.max(0, Math.floor((Date.now() - Date.parse(time)) / 60_000))} min ago`;
+  t('{time} · {minutes} min ago', {
+    time: utc(time).slice(6),
+    minutes: Math.max(0, Math.floor((Date.now() - Date.parse(time)) / 60_000)),
+  });
 const dated = (time) => `${utc(time)} · ${age(time)}`;
 const set = (node, key, value) => {
   if (node[key] !== value) node[key] = value;
@@ -63,7 +70,7 @@ export function createWeatherPanel({
   const root = document.createElement('section');
   root.className = 'weather-readout';
   root.hidden = true;
-  root.setAttribute('aria-label', 'Active weather');
+  root.setAttribute('aria-label', t('Active weather'));
   const timelineHost = document.createElement('div');
   timelineHost.className = 'weather-timeline-block';
   timelineHost.hidden = true;
@@ -71,10 +78,10 @@ export function createWeatherPanel({
   cardsHost.className = 'weather-cards';
   const observedGroup = document.createElement('section');
   observedGroup.className = 'weather-observed-group';
-  observedGroup.setAttribute('aria-label', 'Observed history');
+  observedGroup.setAttribute('aria-label', t('Observed history'));
   const heading = document.createElement('h3');
   heading.className = 'panel-title';
-  heading.textContent = 'Observed history';
+  heading.textContent = t('Observed history');
   const scope = document.createElement('div');
   scope.className = 'weather-observed-scope';
   const observedCardsHost = document.createElement('div');
@@ -132,9 +139,9 @@ export function createWeatherPanel({
     const showTimeline = observed.length > 0;
     set(observedGroup, 'hidden', !showTimeline);
     const names = {
-      'weather-radar': 'Rain radar',
-      'weather-satellite': 'Satellite clouds',
-      'weather-lightning': 'Lightning density',
+      'weather-radar': t('Rain radar'),
+      'weather-satellite': t('Satellite clouds'),
+      'weather-lightning': t('Lightning density'),
     };
     set(scope, 'textContent', observed.map(({ id }) => names[id]).join(' · '));
     set(timelineHost, 'hidden', !showTimeline);
@@ -155,7 +162,7 @@ export function createWeatherPanel({
       disabled: !showTimeline || state.timeline.length < 2,
       readout:
         state.mode === 'latest'
-          ? 'LATEST · newest per product'
+          ? t('LATEST · newest per product')
           : historyTime(state.target),
     });
     const models = active.map(({ id, icon, summary, legend = [], list }) => {
@@ -165,18 +172,26 @@ export function createWeatherPanel({
         const shown = product?.shown ?? summary.shownTime;
         if (state.mode === 'history' && product?.selected === null) {
           const gap = summary.maxGapMinutes || 30;
-          detail = `No frame within ${gap < 60 ? `${gap} min` : `${gap / 60} h`} of ${utc(state.target).slice(6)}`;
+          const time = utc(state.target).slice(6);
+          detail =
+            gap < 60
+              ? t('No frame within {gap} min of {time}', { gap, time })
+              : t('No frame within {gap} h of {time}', { gap: gap / 60, time });
         } else if (shown) {
           detail = dated(shown);
           if (state.mode === 'history')
-            detail +=
+            detail =
               Date.parse(shown) === Date.parse(state.target)
-                ? ' · synced'
-                : ' · nearest';
+                ? t('{detail} · synced', { detail })
+                : t('{detail} · nearest', { detail });
         }
       } else if (id === 'wind') {
-        detail = `Forecast · valid ${utc(summary.validTime)} · issued ${utc(summary.issuedTime)}`;
-        if (state.mode === 'history') detail += ' · Does not follow history';
+        detail = t('Forecast · valid {valid} · issued {issued}', {
+          valid: utc(summary.validTime),
+          issued: utc(summary.issuedTime),
+        });
+        if (state.mode === 'history')
+          detail = t('{detail} · Does not follow history', { detail });
       }
       const lines = [
         { id: 'time', text: detail, muted: true },
@@ -222,7 +237,7 @@ export function createWeatherPanel({
           summary.status ||
           summary.compact ||
           (id === 'wind'
-            ? `Forecast · valid ${utc(summary.validTime)}`
+            ? t('Forecast · valid {valid}', { valid: utc(summary.validTime) })
             : detail),
         compactStatus: Boolean(summary.status),
         blocks,

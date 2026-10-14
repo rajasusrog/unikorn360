@@ -3,6 +3,7 @@ import { orderWeatherImagery } from './imageryOrder.js';
 import { imageryHostStatus } from './imageryHost.js';
 import { createRasterTileProvider } from './rasterTiles.js';
 import { createWeatherShell } from './shellRendering.js';
+import { msg } from '../../i18n/index.js';
 import { readResponseBytesCapped } from '../../sources/httpBody.js';
 import {
   acquireInfraredMosaic,
@@ -294,7 +295,9 @@ function createGlobeRendering({
             );
           }
         } else {
-          lastError = 'Weather tiles unavailable · previous frame retained';
+          lastError = msg(
+            'Weather tiles unavailable · previous frame retained',
+          );
           remove(frame);
         }
         frame.resolve(ok);
@@ -413,7 +416,7 @@ function createGlobeRendering({
             return;
           }
           frame.failed = true;
-          lastError = 'Some weather tiles unavailable';
+          lastError = msg('Some weather tiles unavailable');
           onChange();
         });
         // A shown, transparent layer lets Cesium request staging tiles while the last

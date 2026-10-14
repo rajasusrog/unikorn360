@@ -83,11 +83,32 @@ export function cockpitAltitudeDisplayFt(altitudeM, onGround) {
   return Number.isFinite(altitudeM) ? altitudeM * 3.28084 : null;
 }
 
-/** Format the cockpit Context scope without overstating installation coverage. */
+/**
+ * The English Context scope line. The cockpit passes its own formatter so the
+ * page shows it in the active language; this module stays i18n-free.
+ */
+const ENGLISH_CONTEXT_SCOPE = Object.freeze({
+  window: ({ label, radiusKm }) =>
+    `${label} · ${radiusKm ?? '—'} KM AIR/SEA WINDOW`,
+  installations: ({ scope, coverage }) =>
+    `${scope} · INSTALLATIONS ${coverage}`,
+});
+
+/**
+ * Format the cockpit Context scope without overstating installation coverage.
+ * @param {string|number} subjectLabel
+ * @param {number} radiusM
+ * @param {string|null} [installationCoverage]
+ * @param {{window: Function, installations: Function}} [format] Builds the
+ *   line from `{ label, radiusKm }` (radiusKm is null when unknown) and
+ *   `{ scope, coverage }`.
+ * @returns {string}
+ */
 export function formatCockpitContextScope(
   subjectLabel,
   radiusM,
   installationCoverage = null,
+  format = ENGLISH_CONTEXT_SCOPE,
 ) {
   const normalizedLabel =
     typeof subjectLabel === 'string'
@@ -97,12 +118,12 @@ export function formatCockpitContextScope(
         : '—';
   const radiusKm =
     Number.isFinite(radiusM) && radiusM >= 0
-      ? String(Math.round(radiusM / 1000))
-      : '—';
+      ? Math.round(radiusM / 1000)
+      : null;
   const coverage =
     typeof installationCoverage === 'string' ? installationCoverage.trim() : '';
-  const base = `${normalizedLabel} · ${radiusKm} KM AIR/SEA WINDOW`;
-  return coverage ? `${base} · INSTALLATIONS ${coverage}` : base;
+  const base = format.window({ label: normalizedLabel, radiusKm });
+  return coverage ? format.installations({ scope: base, coverage }) : base;
 }
 
 /** Return seven 30-degree compass divisions centered on a heading. */

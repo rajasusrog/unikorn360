@@ -18,6 +18,7 @@ import { cameraHeightAboveGround, viewCentre, whenIdle } from './view.js';
 import { createGroundClick, groundClickHeightOk } from './groundClick.js';
 import { createGroundCaster, nextSurfaceMode } from './groundCast.js';
 import { createMeshSampler } from './meshSampler.js';
+import { t, translateKnown } from '../../i18n/index.js';
 
 /** Above this camera height the ground under the camera is not worth fetching. */
 const SURFACE_WARM_BELOW_M = 6000;
@@ -335,7 +336,9 @@ export function createStreetLevelLayer({
   }
 
   function unavailableReason(entry) {
-    return `${entry.def.name} needs the Google 3D map: choose it under MAP SOURCE`;
+    return t('{name} needs the Google 3D map: choose it under MAP SOURCE', {
+      name: translateKnown(entry.def.name),
+    });
   }
 
   /** One imagery source at a time: lighting a provider darkens the others. */
@@ -410,7 +413,9 @@ export function createStreetLevelLayer({
   /** The hint a ground-click provider shows, or the provider's own. */
   function hintFor(entry, stats) {
     if (entry.def.groundClick && stats.hint && !state.groundClickReady)
-      return `zoom in to a street to open ${entry.def.name}`;
+      return t('zoom in to a street to open {name}', {
+        name: translateKnown(entry.def.name),
+      });
     return stats.hint || '';
   }
 

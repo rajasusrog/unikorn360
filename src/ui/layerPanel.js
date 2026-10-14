@@ -3,11 +3,58 @@ import { syncRowList } from './rowList.js';
 import { layerFeedState } from '../data/feedState.js';
 export { layerFeedState } from '../data/feedState.js';
 import { GUIDANCE_STATUSES } from '../loadingFeedback.js';
-import {
-  keySetupRequirement,
-  keySetupWithAlternatives,
-} from '../keySetupCore.mjs';
+import { keyGuidanceText, keyRequirementText } from './keyGuidance.js';
 import { createWeatherPanel } from './weatherPanel.js';
+import { formatNumber, msg, t, translateKnown } from '../i18n/index.js';
+
+// Feed-state enum VALUES are machine identifiers (layerFeedState contract, QA
+// hooks, CSS feed-* classes); only the final label value translates, at this
+// presentation boundary. See docs/TRANSLATORS.md keep-English boundary.
+const FEED_STATE_LABEL_KEYS = Object.freeze({
+  nominal: msg('ON'),
+  loading: msg('LOADING'),
+  degraded: msg('DEGRADED'),
+  stale: msg('STALE'),
+  partial: msg('PARTIAL'),
+  fallback: msg('FALLBACK'),
+  unavailable: msg('UNAVAILABLE'),
+});
+
+// Layer display names, localized at the same presentation boundary. Registry
+// ids stay English; a layer without an entry here renders its module name,
+// falling back to the English panel override when one exists.
+const LAYER_NAME_KEYS = Object.freeze({
+  flights: msg('Live Flights'),
+  military: msg('Military Flights'),
+  earthquakes: msg('Earthquakes (24h)'),
+  satellites: msg('Satellites'),
+  'rocket-launches': msg('Space Missions (30d)'),
+  traffic: msg('Street Traffic'),
+  cctv: msg('CCTV'),
+  radio: msg('Radio'),
+  bikeshare: msg('Bikeshare'),
+  'ais-live-vessels': msg('Live AIS Vessels'),
+  'military-installations': msg('Mapped Installations'),
+  'military-awareness': msg('Global Context'),
+  'local-datacenters': msg('Datacenters'),
+  'local-dams': msg('Dams'),
+  'telegeography-submarine-cables': msg('Submarine Cables'),
+  'local-firms': msg('FIRMS Active Fires'),
+  'local-adsb': msg('Local ADS-B'),
+  transit: msg('Transit'),
+  'recent-imagery': msg('Recent Imagery'),
+  'fire-perimeters': msg('Fire Perimeters'),
+  wind: msg('Wind'),
+  'weather-radar': msg('Rain radar'),
+  'weather-satellite': msg('Satellite clouds'),
+  'weather-lightning': msg('Lightning density'),
+  'weather-cyclones': msg('Cyclone advisories'),
+  directions: msg('Directions'),
+});
+
+function lifecycleStateLabel(lifecycleState) {
+  return t(lifecycleState === 'enabling' ? msg('ENABLING') : msg('DISABLING'));
+}
 const FEED_STATE_LABELS = Object.freeze({
   nominal: 'ON',
   loading: 'LOADING',
@@ -21,7 +68,7 @@ const FEED_STATE_LABELS = Object.freeze({
 // Presentation order is independent of catalog registration and startup order.
 const PANEL_GROUPS = [
   {
-    label: 'Movement',
+    label: msg('Movement'),
     ids: [
       'satellites',
       'flights',
@@ -34,11 +81,11 @@ const PANEL_GROUPS = [
     ],
   },
   {
-    label: 'Cameras',
+    label: msg('Cameras'),
     ids: ['cctv', 'recent-imagery', 'street-level'],
   },
   {
-    label: 'Infrastructure',
+    label: msg('Infrastructure'),
     ids: [
       'alpr-cameras',
       'military-installations',
@@ -48,11 +95,11 @@ const PANEL_GROUPS = [
     ],
   },
   {
-    label: 'Events',
+    label: msg('Events'),
     ids: ['rocket-launches', 'earthquakes', 'local-firms', 'fire-perimeters'],
   },
   {
-    label: 'Weather',
+    label: msg('Weather'),
     ids: [
       'wind',
       'weather-radar',
@@ -62,7 +109,7 @@ const PANEL_GROUPS = [
     ],
   },
   {
-    label: 'Utilities',
+    label: msg('Utilities'),
     ids: ['directions', 'radio'],
   },
 ];
@@ -73,17 +120,77 @@ const PANEL_POSITIONS = new Map(
   PANEL_ORDER.map(({ id }, index) => [id, index]),
 );
 const PANEL_LABELS = {
-  'ais-live-vessels': 'Live Vessels',
-  bikeshare: 'Bike Share',
-  cctv: 'Cameras',
-  'street-level': 'Street Level',
-  'alpr-cameras': 'Mapped ALPR Cameras',
-  'local-datacenters': 'Data Centers',
-  'local-firms': 'Active Fires',
+  'ais-live-vessels': msg('Live Vessels'),
+  bikeshare: msg('Bike Share'),
+  cctv: msg('Cameras'),
+  'street-level': msg('Street Level'),
+  'alpr-cameras': msg('Mapped ALPR Cameras'),
+  'local-datacenters': msg('Data Centers'),
+  'local-firms': msg('Active Fires'),
 };
 
+function englishPanelLabel(layer) {
+  return PANEL_LABELS[layer.id] || LAYER_NAME_KEYS[layer.id] || layer.name;
+}
+
+// The panel's own English names win, as before i18n; module names otherwise.
 function panelLabel(layer) {
-  return PANEL_LABELS[layer.id] || layer.name;
+  if (PANEL_LABELS[layer.id]) return t(PANEL_LABELS[layer.id]);
+  const key = LAYER_NAME_KEYS[layer.id];
+  return key ? t(key) : layer.name;
+}
+
+// English module names (layer.name) that other surfaces print, such as the
+// loading chip's layer roster. Looked up by the English text so that surface
+// keeps its English output and only the presentation translates.
+const MODULE_NAME_KEYS = new Map(
+  [
+    ...Object.values(LAYER_NAME_KEYS),
+    ...Object.values(PANEL_LABELS),
+    msg('ALPR Cameras'),
+  ].map((key) => [key, key]),
+);
+
+/**
+ * Translate a layer's English module name for display; any other text
+ * (a provider name, an unknown layer) is returned unchanged.
+ * @param {string} name English `layer.name`.
+ * @returns {string}
+ */
+export function localizeLayerName(name) {
+  const key = MODULE_NAME_KEYS.get(String(name ?? '').trim());
+  return key ? t(key) : name;
+}
+
+// Layer-declared source names stay English in layer state, share links and AI
+// tool output; only the row's source line translates them. Provider names
+// (USGS, CelesTrak, GTFS-RT…) are not listed and pass through unchanged.
+const SOURCE_LABEL_KEYS = new Map(
+  [
+    msg('Flights'),
+    msg('Military aircraft'),
+    msg('Vessels'),
+    msg('CCTV + Street View fallback'),
+    msg('OpenStreetMap + optional Google Maps Places'),
+    msg('GFS / ECMWF IFS · FORECAST'),
+    msg('NOAA nowCOAST · OBSERVED'),
+    msg('NASA FIRMS · LIVE'),
+    msg('OSM routing'),
+    msg('Mapped camera locations'),
+    msg('OpenStreetMap · community mapped'),
+  ].map((key) => [key, key]),
+);
+
+function sourceLabel(source) {
+  if (typeof source !== 'string') return source;
+  if (source === 'Local') return t('Local', { context: 'data source' });
+  const key = SOURCE_LABEL_KEYS.get(source);
+  if (key) return t(key);
+  // A layer with several providers joins their names ("Mapillary · Google
+  // Street View"); a name with a translation shows it.
+  return source.includes(' · ')
+    ? source.split(' · ').map(translateKnown).join(' · ')
+    : translateKnown(source);
 }
 
 /**
@@ -104,10 +211,77 @@ export function layerKeyRequirementTooltip(layer = {}) {
   if (layer?.stats?.keyRequired !== true) return '';
   const requiresKeyId = String(layer.requiresKeyId || '').trim();
   // A layer with several sources also names the ones it could use instead.
-  return keySetupWithAlternatives(
-    requiresKeyId ? keySetupRequirement(requiresKeyId) : '',
+  return keyGuidanceText(
+    requiresKeyId ? keyRequirementText(requiresKeyId) : '',
     layer.stats.keyAlternatives || [],
   );
+}
+
+const ROW_TEXT_SEPARATOR = ' · ';
+
+/** A loading label is English data, at times several joined by " · ". */
+function translateLoadingLabel(label) {
+  return label
+    .trim()
+    .split(ROW_TEXT_SEPARATOR)
+    .map(translateKnown)
+    .join(ROW_TEXT_SEPARATOR);
+}
+// A short Latin code joined by hyphens. Longer runs (a URL, a token in an
+// error) keep their break opportunities so they cannot overflow the rail.
+const HYPHENATED_CODE = /[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+/g;
+const HYPHENATED_CODE_MAX = 16;
+
+/** A span for one run of row text; `keep` stops the browser breaking inside it. */
+function rowTextSpan(text, keep) {
+  const span = document.createElement('span');
+  if (keep) span.className = 'data-keep';
+  span.textContent = text;
+  return span;
+}
+
+/**
+ * Set a row's name, count or meta line so that a narrow column wraps it well
+ * in every language: a Latin code with hyphens (ADS-B, RTL-SDR, GTFS-RT) never
+ * splits at its hyphen, and a " · " separator stays at the end of the line it
+ * closes, so no line starts with "·". The element's textContent is still the
+ * plain string; text with neither feature is set directly.
+ *
+ * @param {HTMLElement} element
+ * @param {string} text
+ */
+export function setRowText(element, text) {
+  const value = String(text ?? '');
+  // Refreshes run every second; leave unchanged text (and its spans) alone.
+  if (element.textContent === value) return;
+  const codes = [...value.matchAll(HYPHENATED_CODE)].filter(
+    (match) => match[0].length <= HYPHENATED_CODE_MAX,
+  );
+  if (!codes.length && !value.includes(ROW_TEXT_SEPARATOR)) {
+    element.textContent = value;
+    return;
+  }
+  const spans = [];
+  const pushPlain = (from, to) => {
+    if (to <= from) return;
+    const pieces = value.slice(from, to).split(ROW_TEXT_SEPARATOR);
+    pieces.forEach((piece, index) => {
+      // The space before the dot belongs to a no-wrap span, so the only break
+      // opportunity around a separator is the space after it.
+      if (index > 0) spans.push(rowTextSpan(' ·', true));
+      const textPiece = index > 0 ? ` ${piece}` : piece;
+      if (textPiece) spans.push(rowTextSpan(textPiece, false));
+    });
+  };
+  let cursor = 0;
+  for (const match of codes) {
+    pushPlain(cursor, match.index);
+    spans.push(rowTextSpan(match[0], true));
+    cursor = match.index + match[0].length;
+  }
+  pushPlain(cursor, value.length);
+  element.textContent = '';
+  for (const span of spans) element.appendChild(span);
 }
 
 /** Layer row presentation over supplied state and actions; no layer imports. */
@@ -211,17 +385,20 @@ export class LayerPanel {
     for (const layer of layers) {
       if (!layer.showInTogglePanel) continue;
       const group =
-        PANEL_ORDER[PANEL_POSITIONS.get(layer.id)]?.label ?? 'Other layers';
+        PANEL_ORDER[PANEL_POSITIONS.get(layer.id)]?.label ??
+        msg('Other layers');
       if (group && group !== previousGroup) {
         const heading = document.createElement('h3');
         heading.className = 'data-layer-group-heading';
-        heading.textContent = group;
+        heading.textContent = t(group);
         this._toggleContainer.appendChild(heading);
       }
       previousGroup = group;
       const row = document.createElement('div');
       row.className = 'data-toggle-row';
       row.dataset.layerId = layer.id;
+      // English name for voice tools, which must not receive translated text.
+      row.dataset.layerName = englishPanelLabel(layer);
 
       const topRow = document.createElement('div');
       topRow.className = 'data-toggle-top';
@@ -234,7 +411,7 @@ export class LayerPanel {
       icon.textContent = layer.icon;
       const name = document.createElement('span');
       name.className = 'data-name';
-      name.textContent = panelLabel(layer);
+      setRowText(name, panelLabel(layer));
       left.appendChild(icon);
       left.appendChild(name);
 
@@ -243,7 +420,7 @@ export class LayerPanel {
 
       const count = document.createElement('span');
       count.className = 'data-count';
-      count.textContent = this._layerCountText(layer.stats);
+      this._syncCount(row, count, layer.stats);
 
       const toggle = document.createElement('button');
       toggle.type = 'button';
@@ -282,7 +459,7 @@ export class LayerPanel {
 
       const bottomRow = document.createElement('div');
       bottomRow.className = 'data-toggle-meta';
-      bottomRow.textContent = this._buildMetaText(layer);
+      setRowText(bottomRow, this._buildMetaText(layer));
 
       row.appendChild(topRow);
       row.appendChild(bottomRow);
@@ -383,6 +560,21 @@ export class LayerPanel {
           ...this._rowControlsFor(layer.id),
         })),
     );
+  }
+
+  /**
+   * Write a row's count. A count that is a phrase carrying its own number
+   * ("24 nearby · 2 on screen") moves to its own line under the name: beside
+   * the toggle it squeezes the name to a word per line in any language. The
+   * "—" placeholder is marked so it can give way to a wide status chip.
+   */
+  _syncCount(row, count, stats) {
+    const text = this._layerCountText(stats);
+    setRowText(count, text);
+    const phrase =
+      typeof stats.countLabel === 'string' && /\d/.test(stats.countLabel);
+    row.classList.toggle('data-toggle-row--count-line', phrase);
+    count.classList.toggle('data-count-empty', text === '—');
   }
 
   /** Qualify a loaded count when it does not mean items currently on screen. */
@@ -508,12 +700,12 @@ export class LayerPanel {
 
       const count = row.querySelector('.data-count');
       if (count) {
-        count.textContent = this._layerCountText(layer.stats);
+        this._syncCount(row, count, layer.stats);
       }
 
       const meta = row.querySelector('.data-toggle-meta');
       if (meta) {
-        meta.textContent = this._buildMetaText(layer);
+        setRowText(meta, this._buildMetaText(layer));
       }
 
       this._syncRowControls(
@@ -528,23 +720,39 @@ export class LayerPanel {
   _buildMetaText(layer) {
     const stats = layer.stats || {};
     const feedState = layerFeedState(stats);
-    const stateLabel = FEED_STATE_LABELS[feedState];
-    const source = stats.source || layer.source;
+    const stateLabel = t(FEED_STATE_LABEL_KEYS[feedState]);
+    const source = sourceLabel(stats.source || layer.source);
     const lifecycleState =
       layer.lifecycleState || (layer.enabled ? 'enabled' : 'disabled');
     if (lifecycleState === 'enabling' || lifecycleState === 'disabling') {
-      return `${lifecycleState.toUpperCase()} · ${source}`;
+      return t('{state} · {source}', {
+        state: lifecycleStateLabel(lifecycleState),
+        source,
+      });
     }
     if (layer.lifecycleUncertain) {
-      return `UNCERTAIN · ${source} · lifecycle state requires reconciliation`;
+      return t(
+        'UNCERTAIN · {source} · lifecycle state requires reconciliation',
+        { source },
+      );
     }
-    const presentedError =
-      stats.error || stats.lastError || stats.managerRefreshError;
+    const presentedError = translateKnown(
+      stats.error || stats.lastError || stats.managerRefreshError,
+    );
     if (presentedError) {
       if (typeof stats.retryInSec === 'number' && stats.retryInSec > 0) {
-        return `${stateLabel} · ${source} · ${presentedError} · retry ${stats.retryInSec}s`;
+        return t('{state} · {source} · {detail} · retry {seconds}s', {
+          state: stateLabel,
+          source,
+          detail: presentedError,
+          seconds: stats.retryInSec,
+        });
       }
-      return `${stateLabel} · ${source} · ${presentedError}`;
+      return t('{state} · {source} · {detail}', {
+        state: stateLabel,
+        source,
+        detail: presentedError,
+      });
     }
     // A guidance status carries its prompt in `statusMessage`, not `error`, so
     // the row still tells the operator what to do without reporting a fault.
@@ -555,20 +763,24 @@ export class LayerPanel {
     ) {
       return `${source} · ${stats.statusMessage.trim()}`;
     }
-    const ago = stats.lastUpdate ? this._timeAgo(stats.lastUpdate) : 'never';
+    const ago = stats.lastUpdate ? this._timeAgo(stats.lastUpdate) : t('never');
     if (stats.loading) {
       const loadingLabel =
         typeof stats.loadingLabel === 'string' && stats.loadingLabel.trim()
-          ? stats.loadingLabel.trim()
-          : 'loading...';
-      return `${source} · ${loadingLabel}`;
+          ? translateLoadingLabel(stats.loadingLabel)
+          : t('loading...');
+      return t('{source} · {loadingLabel}', { source, loadingLabel });
     }
     if (feedState === 'fallback') {
       const detail =
         typeof stats.loadingLabel === 'string' && stats.loadingLabel.trim()
-          ? stats.loadingLabel.trim()
+          ? translateLoadingLabel(stats.loadingLabel)
           : stats.coverage || ago;
-      return `${stateLabel} · ${source} · ${detail}`;
+      return t('{state} · {source} · {detail}', {
+        state: stateLabel,
+        source,
+        detail,
+      });
     }
     if (feedState === 'partial') {
       const { acceptedRowCount, rawRowCount } = stats;
@@ -577,21 +789,40 @@ export class LayerPanel {
         Number.isInteger(rawRowCount) &&
         acceptedRowCount >= 0 &&
         rawRowCount > acceptedRowCount
-          ? `${acceptedRowCount} of ${rawRowCount} records accepted`
-          : 'incomplete snapshot';
-      return `${stateLabel} · ${source} · ${detail} · ${ago}`;
+          ? t('{accepted} of {raw} records accepted', {
+              accepted: acceptedRowCount,
+              raw: rawRowCount,
+            })
+          : t('incomplete snapshot');
+      return t('{state} · {source} · {detail} · {ago}', {
+        state: stateLabel,
+        source,
+        detail,
+        ago,
+      });
     }
     if (feedState === 'stale') {
-      const retry =
-        typeof stats.retryInSec === 'number' && stats.retryInSec > 0
-          ? ` · retrying in ${stats.retryInSec}s`
-          : '';
-      return `${stateLabel} · ${source} · ${ago}${retry}`;
+      if (typeof stats.retryInSec === 'number' && stats.retryInSec > 0) {
+        return t('{state} · {source} · {ago} · retrying in {seconds}s', {
+          state: stateLabel,
+          source,
+          ago,
+          seconds: stats.retryInSec,
+        });
+      }
+      return t('{state} · {source} · {ago}', {
+        state: stateLabel,
+        source,
+        ago,
+      });
     }
     if (typeof stats.loadingLabel === 'string' && stats.loadingLabel.trim()) {
-      return `${source} · ${stats.loadingLabel.trim()}`;
+      return t('{source} · {loadingLabel}', {
+        source,
+        loadingLabel: translateLoadingLabel(stats.loadingLabel),
+      });
     }
-    return `${source} · ${ago}`;
+    return t('{source} · {ago}', { source, ago });
   }
 
   _syncToggleButton(button, layer) {
@@ -630,38 +861,55 @@ export class LayerPanel {
       String(transitioning || (unavailable && !layer.enabled)),
     );
     button.setAttribute('aria-busy', String(transitioning));
-    button.textContent = transitioning
-      ? layer.lifecycleState.toUpperCase()
+    const showsFeedState =
+      !transitioning && !uncertain && (layer.enabled || unavailable);
+    const stateText = transitioning
+      ? lifecycleStateLabel(layer.lifecycleState)
       : uncertain
-        ? 'UNCERTAIN'
-        : layer.enabled || unavailable
-          ? FEED_STATE_LABELS[feedState]
-          : 'OFF';
+        ? t('UNCERTAIN')
+        : showsFeedState
+          ? t(FEED_STATE_LABEL_KEYS[feedState])
+          : t('OFF');
+    // The chip may abbreviate where a language's word is wider than the
+    // status column; the meta line and the accessible name keep the full word.
+    button.textContent =
+      showsFeedState && feedState === 'unavailable'
+        ? t('UNAVAILABLE', { context: 'status chip' })
+        : stateText;
     const keyGuidance = unavailable
-      ? String(layer.stats.error || 'Data source unavailable')
+      ? String(
+          translateKnown(layer.stats.error) || t('Data source unavailable'),
+        )
       : layerKeyRequirementTooltip(layer);
     // Name the missing key on the control itself: a row reading KEY REQUIRED
     // without saying WHICH key leaves a dead control and no next step. Empty
     // when the layer needs no key, or already has one.
     button.title = keyGuidance;
+    const ariaLabel = t('{name}: {state}', {
+      name: panelLabel(layer),
+      state: stateText,
+    });
     button.setAttribute(
       'aria-label',
-      keyGuidance
-        ? `${panelLabel(layer)}: ${button.textContent}. ${keyGuidance}`
-        : `${panelLabel(layer)}: ${button.textContent}`,
+      keyGuidance ? `${ariaLabel}. ${keyGuidance}` : ariaLabel,
     );
   }
 
   _formatCount(n) {
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+    if (n >= 1000)
+      return `${formatNumber(n / 1000, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+        useGrouping: false,
+      })}K`;
     return String(n);
   }
 
   _timeAgo(timestamp) {
     const diff = Math.floor((Date.now() - timestamp) / 1000);
-    if (diff < 5) return 'just now';
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 5) return t('just now');
+    if (diff < 60) return t('{count}s ago', { count: diff });
+    if (diff < 3600) return t('{count}m ago', { count: Math.floor(diff / 60) });
+    return t('{count}h ago', { count: Math.floor(diff / 3600) });
   }
 }

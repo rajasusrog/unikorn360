@@ -696,3 +696,54 @@
     rgba(232, 234, 237, 0.24)
   );
 }
+
+/* Language switch under the Visual Presets title: small mono chips, the
+   active language in accent like the other dock toggles. */
+#command-dock #control-panel .dock-locale-switch {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.2rem;
+  margin-top: 0.22rem;
+}
+
+#command-dock .dock-locale-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 1.35rem;
+  height: 0.95rem;
+  margin: 0;
+  padding: 0 0.22rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.18rem;
+  font-family: var(--font-mono);
+  font-size: 0.46rem;
+  font-weight: 500;
+  letter-spacing: 0.06rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+#command-dock .dock-locale-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--glass-border-hover);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#command-dock .dock-locale-btn:focus-visible {
+  outline: 1px solid var(--text-primary);
+  outline-offset: 1px;
+}
+
+#command-dock .dock-locale-btn.active {
+  color: var(--accent);
+  border-color: rgba(0, 212, 255, 0.55);
+  background: var(--accent-dim);
+}

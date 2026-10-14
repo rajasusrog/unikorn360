@@ -82,3 +82,63 @@
 .gev-voice-cost-value[hidden] {
   display: none;
 }
+
+/* The dock heading row is only as wide as the voice column, so the cost
+   cluster keeps its size and the state label gives way: a long translated
+   state (ПОДКЛЮЧЕНИЕ, CONECTANDO) ends in an ellipsis instead of pushing the
+   cost past the card edge. The kicker already collapses to zero width here;
+   taking it out of the row returns its gap to the state label. The row also
+   reaches left over the gutter beside the mic ring: at heading height the
+   ring has already curved away. English fits as it is, so this applies to
+   the other languages only. */
+html:not([lang='en']) #command-dock .gev-voice-heading {
+  gap: 0.2rem;
+  margin-left: -0.6rem;
+}
+
+html:not([lang='en']) #command-dock .gev-voice-heading > .gev-voice-kicker {
+  display: none;
+}
+
+html:not([lang='en']) #command-dock .gev-voice-heading > #gev-voice-status {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html:not([lang='en']) #command-dock .gev-voice-cost {
+  gap: 0.16rem;
+  padding-left: 0.1rem;
+}
+
+html:not([lang='en']) #command-dock .gev-voice-tier-btn {
+  min-width: 0;
+  padding: 0 0.2rem;
+}
+
+html:not([lang='en']) #command-dock .gev-voice-cost-value {
+  letter-spacing: 0;
+}
+
+/* Live hints ("Ask or command", "Requesting microphone") run longer in other
+   languages; give them a second line from the spare space under the readout
+   rather than cutting them mid-word. */
+html:not([lang='en'])
+  #command-dock
+  #gev-voice-control:is(
+    [data-status='connecting'],
+    [data-status='listening'],
+    [data-status='executing']
+  )
+  #gev-voice-detail {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

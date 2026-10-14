@@ -3,6 +3,7 @@ import {
   localSdrCardView,
   localSdrFeedLine,
   localSdrFmAudioActive,
+  localSdrGainOptionLabel,
 } from './localSdrPresentation.js';
 
 const ELEMENT_IDS = Object.freeze({
@@ -77,6 +78,7 @@ export class LocalSdrControls {
     this._renderFrame = null;
     this._destroyed = false;
     if (!this.elements.card) return;
+    this._labelGainOptions();
     this._bind();
     this._receiverUnsubscribe = receiver.subscribe((state) =>
       this._onReceiverState(state),
@@ -93,6 +95,14 @@ export class LocalSdrControls {
   /** Whether the receiver session is open (keeps the Radio panel expanded). */
   isActive() {
     return Boolean(this._state?.connected);
+  }
+
+  /** Numeric gain options read in the page language; values stay numeric. */
+  _labelGainOptions() {
+    for (const option of this.elements.gain?.options || []) {
+      if (option.value !== 'auto')
+        option.textContent = localSdrGainOptionLabel(option.value);
+    }
   }
 
   _listen(element, type, handler) {

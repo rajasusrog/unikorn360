@@ -17,6 +17,8 @@
  * for), then the constellations users can actually name, then the grab-bag.
  */
 
+import { t, msg } from '../i18n/index.js';
+
 /**
  * Class registry. `label` is the card/legend token, `color` the point color,
  * `blurb` the plain-language gloss for the legend tooltip.
@@ -24,47 +26,47 @@
  */
 export const SATELLITE_CLASSES = Object.freeze({
   station: Object.freeze({
-    label: 'STATION',
+    label: 'STATION', // i18n-ignore: English token; shown through CLASS_DISPLAY_KEYS
     // Warm white — "crewed", and the brightest class in the sky. Deliberately
     // NOT amber: 40-48deg amber is the app's known-military convention
     // (flights.js MIL_TINT / militaryFlights.js MIL_ICON_COLOR) and must not
     // leak into another domain. Slightly warm so it also separates from the
     // pure white the civilian air fleet draws in.
     color: '#fff6e5',
-    blurb: 'Crewed stations and their visiting vehicles',
+    blurb: 'Crewed stations and their visiting vehicles', // i18n-ignore: shown through CLASS_DISPLAY_KEYS
   }),
   nav: Object.freeze({
-    label: 'NAV',
+    label: 'NAV', // i18n-ignore: English token; shown through CLASS_DISPLAY_KEYS
     // Cyan — the strongest accent goes to the class users actually name
     // ("how many GPS satellites are up?"). Takes over the slot the catch-all
     // VISUAL group used to occupy, so this adds no new hue to the app.
     color: '#4fd8ff',
-    blurb: 'GNSS navigation — GPS, GLONASS, Galileo',
+    blurb: 'GNSS navigation — GPS, GLONASS, Galileo', // i18n-ignore: shown through CLASS_DISPLAY_KEYS
   }),
   geo: Object.freeze({
-    label: 'GEO',
+    label: 'GEO', // i18n-ignore: English token; shown through CLASS_DISPLAY_KEYS
     // Violet, unchanged. Already the app's "space" semantic (the detection
     // overlay paints the SAT tier #bda4ff), and the geostationary belt draws
     // as one clean equatorial ring at globe scale.
     color: '#c89bff',
-    blurb: 'Geostationary belt — comms and weather, fixed over the equator',
+    blurb: 'Geostationary belt — comms and weather, fixed over the equator', // i18n-ignore: shown through CLASS_DISPLAY_KEYS
   }),
   visual: Object.freeze({
-    label: 'VISUAL',
+    label: 'VISUAL', // i18n-ignore: English token; shown through CLASS_DISPLAY_KEYS
     // Muted blue-gray. This is the catch-all bucket, so it gives up the bright
     // cyan it used to hold and recedes behind the three classes that mean
     // something. Still well clear of the dense shell by luminance.
     color: '#9fb3c4',
-    blurb: 'Brightest naked-eye objects — CelesTrak visual group',
+    blurb: 'Brightest naked-eye objects — CelesTrak visual group', // i18n-ignore: shown through CLASS_DISPLAY_KEYS
   }),
   comms: Object.freeze({
-    label: 'COMMS',
+    label: 'COMMS', // i18n-ignore: English token; shown through CLASS_DISPLAY_KEYS
     // Dim slate — thousands of these appear in DENSE mode. They must read as
     // texture behind the core catalog, never compete with it. Rec.601 luma
     // ~0.40 against VISUAL's ~0.69 keeps the two separable even when the
     // NVG/FLIR shaders collapse the scene to a single channel.
     color: '#54697f',
-    blurb: 'Broadband constellation shell — shown only in DENSE mode',
+    blurb: 'Broadband constellation shell — shown only in DENSE mode', // i18n-ignore: shown through CLASS_DISPLAY_KEYS
   }),
 });
 
@@ -76,6 +78,34 @@ export const SATELLITE_CLASS_ORDER = Object.freeze([
   'visual',
   'comms',
 ]);
+
+// Display keys for the class table above: `label`/`blurb` stay the English
+// source-of-truth tokens (tests read them), while the card and legend accessors
+// translate through these keys at the presentation boundary.
+const CLASS_DISPLAY_KEYS = Object.freeze({
+  station: Object.freeze({
+    label: msg('STATION'),
+    blurb: msg('Crewed stations and their visiting vehicles'),
+  }),
+  nav: Object.freeze({
+    label: msg('NAV'),
+    blurb: msg('GNSS navigation — GPS, GLONASS, Galileo'),
+  }),
+  geo: Object.freeze({
+    label: msg('GEO'),
+    blurb: msg(
+      'Geostationary belt — comms and weather, fixed over the equator',
+    ),
+  }),
+  visual: Object.freeze({
+    label: msg('VISUAL'),
+    blurb: msg('Brightest naked-eye objects — CelesTrak visual group'),
+  }),
+  comms: Object.freeze({
+    label: msg('COMMS'),
+    blurb: msg('Broadband constellation shell — shown only in DENSE mode'),
+  }),
+});
 
 /**
  * CelesTrak group tag → { class, subtype }. Subtype names the specific
@@ -137,9 +167,14 @@ export function satelliteClassColor(group) {
  * @param {{ isIss?: boolean }} [options] Whether this is the ISS.
  * @returns {string} Display label.
  */
-export function satelliteClassLabel(group, { isIss = false } = {}) {
+export function satelliteClassLabel(
+  group,
+  { isIss = false, localize = true } = {},
+) {
   const { klass, subtype } = satelliteClassOf(group, { isIss });
-  const base = SATELLITE_CLASSES[klass].label;
+  // localize: false keeps the English label for data the AI tools query.
+  const label = CLASS_DISPLAY_KEYS[klass].label;
+  const base = localize ? t(label) : label;
   return subtype ? `${base} · ${subtype}` : base;
 }
 
@@ -180,11 +215,12 @@ export function satelliteClassLegend(counts) {
     const count = counts?.[klass];
     if (!(count > 0)) continue;
     const spec = SATELLITE_CLASSES[klass];
+    const display = CLASS_DISPLAY_KEYS[klass];
     result.push({
       klass,
-      label: spec.label,
+      label: t(display.label),
       color: spec.color,
-      blurb: spec.blurb,
+      blurb: t(display.blurb),
       count,
     });
   }

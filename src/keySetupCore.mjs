@@ -32,11 +32,15 @@ export const KEY_SETUP_APPEND_HEADER =
  * bundle by design (restrict them at the provider, per SECURITY.md).
  * `hidden` keeps advanced configuration out of the panel and missing-key count.
  */
+// Marks `unlocks` copy for i18n extraction; Provider Settings translates it
+// with t(). Kept local so the server can import this module without i18n.
+const msg = (text) => text;
+
 export const KEY_SETUP_KEYS = Object.freeze([
   Object.freeze({
     id: 'google-maps',
-    title: 'GOOGLE MAPS',
-    unlocks: 'The photorealistic 3D planet, place search + Street View',
+    title: 'GOOGLE MAPS', // i18n-ignore: provider product name
+    unlocks: msg('The photorealistic 3D planet, place search + Street View'),
     getUrl: 'https://developers.google.com/maps/documentation/tile/get-api-key',
     envVars: Object.freeze(['GOOGLE_MAPS_API_KEY']),
     tier: 'metered',
@@ -44,8 +48,10 @@ export const KEY_SETUP_KEYS = Object.freeze([
   }),
   Object.freeze({
     id: 'google-maps-server',
-    title: 'GOOGLE MAPS — SERVER',
-    unlocks: 'Places context + Street View fallback; optional separate key',
+    title: 'GOOGLE MAPS — SERVER', // i18n-ignore: provider product name; row is hidden
+    unlocks: msg(
+      'Places context + Street View fallback; optional separate key',
+    ),
     getUrl:
       'https://developers.google.com/maps/documentation/places/web-service/get-api-key',
     envVars: Object.freeze(['GOOGLE_MAPS_SERVER_API_KEY']),
@@ -54,40 +60,40 @@ export const KEY_SETUP_KEYS = Object.freeze([
   }),
   Object.freeze({
     id: 'openai',
-    title: 'OPENAI',
-    unlocks: 'Voice control — API key or ChatGPT OAuth',
+    title: 'OPENAI', // i18n-ignore: provider product name
+    unlocks: msg('Voice control — API key or ChatGPT OAuth'),
     getUrl: 'https://platform.openai.com/api-keys',
     envVars: Object.freeze(['OPENAI_API_KEY']),
     tier: 'metered',
   }),
   Object.freeze({
     id: 'aisstream',
-    title: 'AISSTREAM',
-    unlocks: 'Live ships, worldwide',
+    title: 'AISSTREAM', // i18n-ignore: provider product name
+    unlocks: msg('Live ships, worldwide'),
     getUrl: 'https://aisstream.io',
     envVars: Object.freeze(['AISSTREAM_API_KEY']),
     tier: 'free',
   }),
   Object.freeze({
     id: 'firms',
-    title: 'NASA FIRMS',
-    unlocks: 'Live active-fire detections',
+    title: 'NASA FIRMS', // i18n-ignore: provider product name
+    unlocks: msg('Live active-fire detections'),
     getUrl: 'https://firms.modaps.eosdis.nasa.gov/api/map_key/',
     envVars: Object.freeze(['FIRMS_MAP_KEY']),
     tier: 'free',
   }),
   Object.freeze({
     id: 'tomtom',
-    title: 'TOMTOM',
-    unlocks: 'Real live traffic (keyless runs a simulation)',
+    title: 'TOMTOM', // i18n-ignore: provider product name
+    unlocks: msg('Real live traffic (keyless runs a simulation)'),
     getUrl: 'https://my.tomtom.com/keys',
     envVars: Object.freeze(['TOMTOM_API_KEY']),
     tier: 'free',
   }),
   Object.freeze({
     id: 'cesium-ion',
-    title: 'CESIUM ION',
-    unlocks: 'Bing imagery map stacks + world terrain',
+    title: 'CESIUM ION', // i18n-ignore: provider product name
+    unlocks: msg('Bing imagery map stacks + world terrain'),
     getUrl: 'https://ion.cesium.com/tokens',
     envVars: Object.freeze(['CESIUM_ION_TOKEN']),
     tier: 'free',
@@ -95,17 +101,18 @@ export const KEY_SETUP_KEYS = Object.freeze([
   }),
   Object.freeze({
     id: 'opensky',
-    title: 'OPENSKY',
-    unlocks: 'More flight-polling credits (anonymous works without)',
+    title: 'OPENSKY', // i18n-ignore: provider product name
+    unlocks: msg('More flight-polling credits (anonymous works without)'),
     getUrl: 'https://opensky-network.org',
     envVars: Object.freeze(['OPENSKY_CLIENT_ID', 'OPENSKY_CLIENT_SECRET']),
     tier: 'free',
   }),
   Object.freeze({
     id: 'mapillary',
-    title: 'MAPILLARY',
-    unlocks:
+    title: 'MAPILLARY', // i18n-ignore: provider product name
+    unlocks: msg(
       'Street-level imagery and coverage in the Street Level layer. Free: register an app in the Mapillary developer dashboard and paste its Client Token',
+    ),
     getUrl: 'https://www.mapillary.com/dashboard/developers',
     envVars: Object.freeze(['MAPILLARY_CLIENT_TOKEN']),
     tier: 'free',
@@ -113,8 +120,8 @@ export const KEY_SETUP_KEYS = Object.freeze([
   }),
   Object.freeze({
     id: 'launch-library',
-    title: 'LAUNCH LIBRARY',
-    unlocks: 'Higher space-missions request allowance',
+    title: 'LAUNCH LIBRARY', // i18n-ignore: provider product name
+    unlocks: msg('Higher space-missions request allowance'),
     getUrl: 'https://thespacedevs.com',
     envVars: Object.freeze(['LL2_API_TOKEN']),
     tier: 'free',
@@ -346,6 +353,19 @@ export function knownKeySetupEnvVars() {
 }
 
 /** Tooltip guidance for a control gated by one registry entry. */
+/**
+ * Env-var requirements for a registry entry, as machine values for
+ * presentation layers that localize the guidance sentence themselves
+ * (this module also runs in node-side key-setup builds, which stay English).
+ * @param {string} id Registry entry id.
+ * @returns {string|null} Joined env-var names, or null when nothing is required.
+ */
+export function keySetupRequirementEnvVars(id) {
+  const entry = KEY_SETUP_KEYS.find((candidate) => candidate.id === id);
+  if (!entry || entry.hidden) return null;
+  return entry.envVars.join(' + ');
+}
+
 export function keySetupRequirement(id) {
   const entry = KEY_SETUP_KEYS.find((candidate) => candidate.id === id);
   if (!entry || entry.hidden) return '';

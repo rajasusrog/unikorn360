@@ -4,6 +4,8 @@
  * after the vessel cards moved out of their dedicated canvas renderer.
  */
 
+import { t, msg } from '../i18n/index.js';
+
 export const VESSEL_OVERLAY_SOURCE_ID = 'ais-live-vessels';
 /** Existing selector grid size; one ambient winner is retained per cell. */
 export const VESSEL_LABEL_GRID_PX = 118;
@@ -63,6 +65,43 @@ const NUMERIC_TYPE_FAMILIES = {
   8: 'TANKER',
   9: 'OTHER',
 };
+
+// Display keys for the normalized English type tokens above. The tokens stay
+// machine values — TYPE_STYLES matches on them and tests pin them — so card
+// text translates only through this map at the presentation boundary.
+const TYPE_DISPLAY_KEYS = Object.freeze({
+  FISHING: msg('FISHING'),
+  TOWING: msg('TOWING'),
+  DREDGER: msg('DREDGER'),
+  'DIVE OPS': msg('DIVE OPS'),
+  MILITARY: msg('MILITARY'),
+  SAILING: msg('SAILING'),
+  PLEASURE: msg('PLEASURE'),
+  PILOT: msg('PILOT'),
+  SAR: msg('SAR'),
+  TUG: msg('TUG'),
+  'PORT TENDER': msg('PORT TENDER'),
+  'ANTI-POLLUTION': msg('ANTI-POLLUTION'),
+  'LAW ENFORCE': msg('LAW ENFORCE'),
+  MEDICAL: msg('MEDICAL'),
+  'HIGH-SPEED': msg('HIGH-SPEED'),
+  PASSENGER: msg('PASSENGER'),
+  CARGO: msg('CARGO'),
+  TANKER: msg('TANKER'),
+  OTHER: msg('OTHER'),
+});
+
+/**
+ * Card-display form of a normalized AIS type: known tokens translate through
+ * the catalog; free-text types and unknown codes render unchanged.
+ * @param {string} type Raw AIS type.
+ * @returns {string}
+ */
+export function displayVesselType(type) {
+  const normalized = normalizeVesselType(type);
+  const key = TYPE_DISPLAY_KEYS[normalized.toUpperCase()];
+  return key ? t(key) : normalized;
+}
 
 /**
  * Resolve an AIS type to display text: bare numeric ship-type codes map to

@@ -221,6 +221,18 @@
   white-space: nowrap;
 }
 
+/* A longer translated title in a collapsed rail launcher tightens its
+   tracking rather than pushing the disclosure button out of the card. */
+html:not([lang='en'])
+  #right-context-rail
+  .panel-collapsible.collapsed
+  .panel-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 1.5px;
+}
+
 .panel-divider {
   flex: 1;
   height: 1px;
@@ -228,6 +240,8 @@
 }
 
 .panel-collapse-btn {
+  /* A long translated title must not squeeze the toggle into a sliver. */
+  flex-shrink: 0;
   width: 22px;
   height: 22px;
   border-radius: 6px;
@@ -770,6 +784,15 @@
   white-space: nowrap;
 }
 
+/* One label column across the Display rows: --pp-label-chars is the longest
+   label of the active language (set by applicationShell), and the labels are
+   monospace, so every slider track starts at the same x whatever the
+   language. 0.125em is the 1px letter-spacing at 8px. */
+.pp-slider-row > .pp-slider-mini-label {
+  flex: 0 0 auto;
+  min-width: calc(var(--pp-label-chars, 0) * (1ch + 0.125em));
+}
+
 .detection-slider-row {
   min-width: 170px;
   padding: 5px 8px 6px;
@@ -966,6 +989,11 @@
 #draw-mode-row {
   min-width: 184px;
 }
+/* Equal thirds with room around the label, so a long shape name never runs
+   edge to edge in its segment. */
+#draw-mode-row .pp-mode-btn {
+  padding: 0 4px;
+}
 #draw-label-row {
   flex-wrap: wrap;
   row-gap: 6px;
@@ -987,8 +1015,11 @@
 .pp-text-input:focus {
   border-color: var(--accent);
 }
+/* Sized to its longest colour name so a translated one is never clipped;
+   74px keeps the English width. */
 .draw-color-select {
-  flex: 0 0 74px;
+  flex: 0 0 auto;
+  min-width: 74px;
 }
 .draw-clear-btn {
   flex: 0 0 auto;
@@ -1234,15 +1265,20 @@ body.ui-clean-view #scene-runtime.active {
   );
 }
 
-.param-slider-row {
-  display: flex;
+/* One label column for every parameter, as wide as the longest label in the
+   active language, so all slider tracks start and end at the same x. */
+#param-sliders {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
 }
 
-.param-slider-row:last-child {
-  margin-bottom: 0;
+.param-slider-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
 }
 
 .param-label {

@@ -250,8 +250,12 @@
   gap: 5px;
 }
 .radio-transport button {
+  min-width: 0;
   min-height: 30px;
   padding: 6px 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border: 1px solid rgba(65, 220, 231, 0.28);
   border-radius: 5px;
   color: #8feaf2;
@@ -610,10 +614,14 @@
   gap: 8px;
 }
 
+/* The name takes the room the status column leaves; a long word wraps inside
+   it instead of pushing the toggle out of line. */
 .data-toggle-left {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .data-icon {
@@ -621,16 +629,37 @@
   line-height: 1;
 }
 
+/* A fixed icon box, so every name (and the meta line under it, 26px in)
+   starts at the same x whatever the glyph's width. */
+.data-toggle-left .data-icon {
+  flex: none;
+  width: 18px;
+  text-align: center;
+}
+
 .data-name {
+  min-width: 0;
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
   letter-spacing: 0.3px;
+  overflow-wrap: anywhere;
+}
+
+/* Translated layer names are longer: break between words, and hyphenate a
+   word that still does not fit instead of splitting it anywhere. */
+html:not([lang='en']) .data-name {
+  overflow-wrap: break-word;
+  hyphens: auto;
+  /* No two-letter pieces such as "es-paciales": a word hyphenates only when
+     at least four letters stay on each side. */
+  hyphenate-limit-chars: 8 4 4;
 }
 
 .data-toggle-right {
   display: flex;
+  flex: 0 1 auto;
   align-items: center;
   gap: 10px;
 }
@@ -640,8 +669,56 @@
   font-size: 11px;
   letter-spacing: 0.5px;
   color: var(--text-secondary);
-  min-width: 30px;
   text-align: right;
+  text-wrap: balance;
+}
+
+/* Row text pieces that must not break inside: a hyphenated code (ADS-B) and
+   the space before a " · " separator (see setRowText in layerPanel.js). */
+.data-keep {
+  white-space: nowrap;
+}
+
+/* A count phrase ("24 nearby · 2 on screen") takes its own line under the
+   name instead of squeezing it beside the toggle. */
+.data-toggle-row--count-line .data-toggle-top {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.data-toggle-row--count-line .data-toggle-right {
+  display: contents;
+}
+
+/* A zero basis, so a long name wraps beside the toggle instead of pushing the
+   toggle onto the count's line. */
+.data-toggle-row--count-line .data-toggle-left {
+  flex-basis: 0;
+}
+
+.data-toggle-row--count-line .data-count {
+  order: 1;
+  flex: 1 0 100%;
+  padding-left: 26px;
+  font-size: 10px;
+  text-align: left;
+}
+
+/* The "—" placeholder gives way to a wide status chip, so the name keeps the
+   room it needs. */
+.data-toggle-right:has(
+    .data-toggle-btn:is(
+      .transitioning,
+      .feed-loading,
+      .feed-degraded,
+      .feed-stale,
+      .feed-partial,
+      .feed-fallback,
+      .feed-unavailable
+    )
+  )
+  .data-count-empty {
+  display: none;
 }
 
 .data-toggle-btn {
@@ -662,8 +739,10 @@
     min-width var(--transition-fast),
     letter-spacing var(--transition-fast);
   outline: none;
+  flex: none;
   min-width: 38px;
   text-align: center;
+  white-space: nowrap;
 }
 
 /* An inset ring stays visible inside the scrolling layer list. */
@@ -672,13 +751,15 @@
   outline-offset: -3px;
 }
 
+/* Status chips up to eight characters share one width; a longer word grows
+   its own chip rather than widening every chip and squeezing every name. */
 .data-toggle-btn.feed-loading,
 .data-toggle-btn.feed-degraded,
 .data-toggle-btn.feed-stale,
 .data-toggle-btn.feed-partial,
 .data-toggle-btn.feed-fallback,
 .data-toggle-btn.feed-unavailable {
-  min-width: 82px;
+  min-width: 72px;
   letter-spacing: 0.8px;
 }
 
@@ -883,14 +964,16 @@
 .data-row-list-lead {
   min-width: 34px;
   flex: none;
+  white-space: nowrap;
   opacity: 0.85;
 }
 
+/* The whole instruction wraps under itself rather than losing its tail:
+   "Turn right onto …" says nothing, and Russian or Spanish run longer. */
 .data-row-list-text {
   flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* A list line that states a limit rather than offering an action. */

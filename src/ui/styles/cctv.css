@@ -70,6 +70,22 @@
   margin-bottom: 0;
 }
 
+/* Spanish labels run ~25% longer than English and overflow the nowrap
+   .scene-btn rows inside the fixed-width CCTV panel (e.g. ENFOCAR ·
+   COBERTURA DESACTIVADA · AUTO HOP DESACTIVADO). Let the rows wrap under
+   es only; the English layout stays pixel-identical. */
+html[lang='es'] .cctv-controls {
+  flex-wrap: wrap;
+}
+
+/* A translated label longer than its button wraps inside the button instead
+   of running past the panel edge. English labels fit on one line, so the
+   English layout is unchanged. */
+.cctv-controls .scene-btn {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
 .cctv-calibration-block {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 9px;
@@ -157,6 +173,9 @@
   padding: 6px 8px;
   font-family: var(--font-sans);
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   outline: none;
 }
 
@@ -364,4 +383,34 @@
   line-height: 1.45;
   color: #a8f7ff;
   text-shadow: 0 0 10px rgba(0, 212, 255, 0.18);
+}
+
+/* Longer translated labels and units: tighter calibration chips keep the
+   seven values to two rows so SAVE / RESET stay in view, and the camera
+   select uses the compact mono face. English keeps its original look. */
+html:not([lang='en']) .cctv-cal-readout {
+  gap: 4px;
+}
+
+html:not([lang='en']) .cctv-cal-value {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  padding: 4px;
+}
+
+html:not([lang='en']) #cctv-camera-select {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+/* The camera name gets its own row; PREV / NEXT share the row below it. */
+html:not([lang='en']) .cctv-controls:has(#cctv-camera-select) {
+  flex-wrap: wrap;
+}
+
+html:not([lang='en']) #cctv-camera-select {
+  flex: 1 1 100%;
+  order: -1;
 }

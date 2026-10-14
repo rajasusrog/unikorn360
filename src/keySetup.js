@@ -20,12 +20,24 @@ import {
  * the chip and the dialog are removed outright.
  */
 
-/** Chip label — pure, exported for tests. */
+import { t, msg, tn } from './i18n/index.js';
+
+/**
+ * Chip label — pure, exported for tests. The exact English values are pinned
+ * by keySetup.test.mjs; t() resolves them from the catalog, so the default
+ * locale renders byte-identical text and 'es' localizes at the same site.
+ * @param {{total?: number, setCount?: number}|null} status
+ * @returns {string}
+ */
 export function keySetupChipLabel(status) {
   const missing = Math.max(0, (status?.total || 0) - (status?.setCount || 0));
   return missing > 0
-    ? `POWER UP · ${missing} ${missing === 1 ? 'KEY' : 'KEYS'} WAITING`
-    : 'POWERED UP';
+    ? tn(
+        missing,
+        'POWER UP · {count} KEY WAITING',
+        'POWER UP · {count} KEYS WAITING',
+      )
+    : t('POWERED UP');
 }
 
 /**
@@ -116,12 +128,17 @@ function updateCloudVoiceAuthControl(auth, busy = false) {
   const state = auth.querySelector('.key-setup-cloud-auth-state');
   const toggle = auth.querySelector('[data-cloud-voice-auth-toggle]');
   state.textContent =
-    mode === 'oauth' ? 'VOICE AUTH · CHATGPT OAUTH' : 'VOICE AUTH · API KEY';
-  toggle.textContent = mode === 'oauth' ? 'USE API KEY' : 'USE CHATGPT OAUTH';
+    mode === 'oauth'
+      ? t('VOICE AUTH · CHATGPT OAUTH')
+      : t('VOICE AUTH · API KEY');
+  toggle.textContent =
+    mode === 'oauth' ? t('USE API KEY') : t('USE CHATGPT OAUTH');
   toggle.title =
     mode === 'oauth'
-      ? 'Use OPENAI_API_KEY for the next cloud voice session'
-      : 'Use the signed-in local ChatGPT/Codex OAuth session for the next cloud voice session';
+      ? t('Use OPENAI_API_KEY for the next cloud voice session')
+      : t(
+          'Use the signed-in local ChatGPT/Codex OAuth session for the next cloud voice session',
+        );
   // Keep the control focusable while the delegated handler blocks repeats.
   toggle.setAttribute('aria-disabled', String(busy));
 }
@@ -141,21 +158,22 @@ function buildRow(documentRef, key) {
   led.className = 'key-setup-led';
   led.setAttribute('aria-hidden', 'true');
   const title = documentRef.createElement('strong');
-  title.textContent = key.title;
+  title.textContent = key.title; // i18n-ignore: provider product name
   const tier = documentRef.createElement('span');
   tier.className = 'key-setup-tier';
   tier.textContent = TIER_DOTS[key.tier] || '';
   tier.title =
     key.tier === 'metered'
-      ? 'Metered — a billing-enabled account'
-      : 'Free key — register, paste, done';
+      ? t('Metered — a billing-enabled account')
+      : t('Free key — register, paste, done');
   head.append(led, title, tier);
   if (key.clientExposed) {
     const exposed = documentRef.createElement('span');
     exposed.className = 'key-setup-exposed';
-    exposed.textContent = 'browser-side';
-    exposed.title =
-      'This key runs in the browser by design — restrict it at the provider (see SECURITY.md)';
+    exposed.textContent = t('browser-side');
+    exposed.title = t(
+      'This key runs in the browser by design — restrict it at the provider (see SECURITY.md)',
+    );
     head.append(exposed);
   }
   if (external) {
@@ -163,9 +181,10 @@ function buildRow(documentRef, key) {
     // facts this panel reports, never values it rewrites or deletes.
     const badge = documentRef.createElement('span');
     badge.className = 'key-setup-external';
-    badge.textContent = 'configured externally';
-    badge.title =
-      'Supplied by your environment, Keychain, or launcher — change it where it was set';
+    badge.textContent = t('configured externally');
+    badge.title = t(
+      'Supplied by your environment, Keychain, or launcher — change it where it was set',
+    );
     head.append(badge);
   }
   const get = documentRef.createElement('a');
@@ -173,12 +192,12 @@ function buildRow(documentRef, key) {
   get.href = key.getUrl;
   get.target = '_blank';
   get.rel = 'noopener noreferrer';
-  get.textContent = key.set ? 'MANAGE ↗' : 'GET KEY ↗';
+  get.textContent = key.set ? t('MANAGE ↗') : t('GET KEY ↗');
   head.append(get);
 
   const unlocks = documentRef.createElement('p');
   unlocks.className = 'key-setup-unlocks';
-  unlocks.textContent = key.unlocks;
+  unlocks.textContent = t(key.unlocks);
 
   row.append(head, unlocks);
   if (!external) {
@@ -194,8 +213,8 @@ function buildRow(documentRef, key) {
       input.dataset.envVar = envVar;
       input.setAttribute('aria-label', envVar);
       input.placeholder = key.set
-        ? `${envVar} saved — paste to replace`
-        : `paste ${envVar}`;
+        ? t('{envVar} saved — paste to replace', { envVar })
+        : t('paste {envVar}', { envVar });
       fields.append(input);
     }
     if (key.managed === 'file') {
@@ -203,8 +222,10 @@ function buildRow(documentRef, key) {
       remove.type = 'button';
       remove.className = 'key-setup-remove';
       remove.dataset.keySetupRemove = JSON.stringify(key.envVars);
-      remove.textContent = 'REMOVE';
-      remove.title = `Remove ${key.title} from this app's saved keys`;
+      remove.textContent = t('REMOVE');
+      remove.title = t("Remove {title} from this app's saved keys", {
+        title: key.title,
+      });
       fields.append(remove);
     }
     row.append(fields);
@@ -314,7 +335,9 @@ export async function initKeySetup({
     if (disposed) return;
     status = nextStatus;
     chipLabel.textContent = keySetupChipLabel(status);
-    chip.title = `Project keys: ${keySetupChipLabel(status)}`;
+    chip.title = t('Project keys: {status}', {
+      status: keySetupChipLabel(status),
+    });
     chip.setAttribute('aria-label', chip.title);
     // Fully powered is the owner's clean screen: the chip retires. The dialog
     // stays reachable this session (and via ?setup=1) to swap or verify keys.
@@ -369,17 +392,19 @@ export async function initKeySetup({
 
   const storeLabel = () =>
     status?.store === 'pinokio-environment'
-      ? 'your app configuration'
-      : 'your local .env';
+      ? t('your app configuration')
+      : t('your local .env');
 
-  const submitUpdates = async (updates, doneVerb) => {
+  // doneMessageKey names the whole saved/removed sentence; the storage
+  // destination is interpolated so the {store} phrase stays one spelling.
+  const submitUpdates = async (updates, doneMessageKey) => {
     if (disposed || busy) return;
     const googleWasUnset = !status?.keys?.find(
       (key) => key.id === 'google-maps',
     )?.set;
     busy = true;
     applyButton?.setAttribute('aria-disabled', 'true');
-    say('Saving…');
+    say(t('Saving…'));
     try {
       const response = await doFetch('/api/setup/keys', {
         method: 'POST',
@@ -390,7 +415,11 @@ export async function initKeySetup({
       const payload = await response.json().catch(() => ({}));
       if (disposed) return;
       if (!response.ok || !payload.ok) {
-        say(payload.error || `Save failed (${response.status}).`);
+        // payload.error is a server-authored message (API value) — shown as-is.
+        say(
+          payload.error ||
+            t('Save failed ({status}).', { status: response.status }),
+        );
         return;
       }
       for (const input of root.querySelectorAll('input[data-env-var]'))
@@ -420,11 +449,13 @@ export async function initKeySetup({
           signal: lifetime.signal,
         });
       }
-      say(
-        `${doneVerb} ${storeLabel()}. Restarting — this page reloads itself.`,
-      );
+      say(t(doneMessageKey, { store: storeLabel() }));
     } catch (error) {
-      say(`Save failed: ${error?.message || error}`);
+      say(
+        t('Save failed: {detail}', {
+          detail: error?.message || error,
+        }),
+      );
     } finally {
       busy = false;
       applyButton?.setAttribute('aria-disabled', 'false');
@@ -441,10 +472,13 @@ export async function initKeySetup({
       })),
     );
     if (!Object.keys(updates).length) {
-      say('Paste at least one key first.');
+      say(t('Paste at least one key first.'));
       return;
     }
-    await submitUpdates(updates, 'Saved to');
+    await submitUpdates(
+      updates,
+      msg('Saved to {store}. Restarting — this page reloads itself.'),
+    );
   };
 
   chip.addEventListener('click', openDialog);
@@ -560,11 +594,11 @@ export async function initKeySetup({
     // a deliberate two-step the lure cannot pre-satisfy.
     const ok =
       typeof globalThis.confirm !== 'function' ||
-      globalThis.confirm('Remove this key from your saved configuration?');
+      globalThis.confirm(t('Remove this key from your saved configuration?'));
     if (!ok) return;
     void submitUpdates(
       Object.fromEntries(envVars.map((name) => [name, null])),
-      'Removed from',
+      msg('Removed from {store}. Restarting — this page reloads itself.'),
     );
   });
 

@@ -1,3 +1,4 @@
+import { installationClassLabel } from './classLabel.js';
 import * as Cesium from 'cesium';
 import {
   MILITARY_LABEL_CAP,
@@ -177,9 +178,7 @@ export function createNamedMarkers({ state, services, parts, overlayHost }) {
       marker.entry.selected = record.id === state.selectedId;
       marker.entry.details = marker.entry.selected
         ? [
-            String(record.class || 'installation')
-              .replaceAll('_', ' ')
-              .toUpperCase(),
+            installationClassLabel(record.class),
             ...(record.memberNames || []).slice(0, 3),
           ]
         : [];

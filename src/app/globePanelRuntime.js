@@ -541,6 +541,7 @@ export function panelRuntime(config) {
         const notice = document.createElement('div');
         notice.id = 'status';
         notice.textContent =
+          // i18n-ignore: panel runtime runs as source text in the host page, with no i18n module or app locale
           "This panel lost its 3D graphics, likely because other God's Eye " +
           "View panels in this conversation hold them. Use Open in God's " +
           'Eye View above, or show it in a new conversation.';
@@ -616,6 +617,7 @@ export function panelRuntime(config) {
     if (context?.displayMode) displayMode = context.displayMode;
     if (context?.availableDisplayModes)
       expand.hidden = !context.availableDisplayModes.includes('fullscreen');
+    // i18n-ignore: panel runtime runs as source text in the host page, with no i18n module or app locale
     expand.textContent = displayMode === 'fullscreen' ? 'Collapse' : 'Expand';
   };
   expand.addEventListener('click', () => {
@@ -640,6 +642,7 @@ export function panelRuntime(config) {
     appCapabilities: { availableDisplayModes: ['inline', 'fullscreen'] },
     appInfo: {
       name: 'gods-eye-view',
+      // i18n-ignore: product name sent to the MCP host
       title: "God's Eye View",
       version: '1.0.0',
     },

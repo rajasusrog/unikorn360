@@ -1,4 +1,5 @@
 import { CCTV_AMBIENT_CARD_MAX } from '../../data/cctvLod.js';
+import { t } from '../../i18n/index.js';
 import { ACTIVE_FRAME_REFRESH_MS, IDLE_FRAME_REFRESH_MS } from './policy.js';
 import { headingHudToken, isHeadingEstimated } from './headingConfidence.js';
 
@@ -19,8 +20,13 @@ export function createPresentation({
     const active = parts.selection.getActiveRecord();
     if (!active) {
       return layerState._records.length
-        ? `${layerState._records.length} CAMERAS STANDING BY · NO CAMERA SELECTED · CLICK A CAMERA TO ACTIVATE`
-        : 'No cameras available in catalog.';
+        ? t(
+            '{count} CAMERAS STANDING BY · NO CAMERA SELECTED · CLICK A CAMERA TO ACTIVATE',
+            {
+              count: layerState._records.length,
+            },
+          )
+        : t('No cameras available in catalog.');
     }
 
     const area = parts.model.sectorAreaKm2(
@@ -34,21 +40,33 @@ export function createPresentation({
     const calBadge = parts.calibration.deriveCalBadge(active.camera);
 
     return [
-      `${active.camera.city.toUpperCase()} CCTV`,
+      t('{city} CCTV', {
+        city: active.camera.city.toUpperCase(),
+      }),
       `${active.camera.name.toUpperCase()}`,
       // A synthetic bearing (headingConfidence 'low', no human calibration)
       // is tagged so a hashed guess never reads as a surveyed facing (#639).
       headingHudToken(active.camera),
-      `FOV ${Math.round(active.camera.fovDeg)}°`,
-      `COVERAGE ${area.toFixed(2)}km²`,
-      overlapCount > 0 ? `OVERLAP ${overlapCount} cams` : 'ISOLATED VIEW',
-      `PROJ ${layerState._showProjection ? 'MONITOR' : 'OFF'}`,
-      layerState._coverageMode === 'viewshed' ? 'VIEWSHED' : null,
-      `CAL ${calBadge.replace('-', ' ').toUpperCase()}`,
+      t('FOV {value}°', {
+        value: Math.round(active.camera.fovDeg),
+      }),
+      t('COVERAGE {value}km²', { value: area.toFixed(2) }),
+      overlapCount > 0
+        ? t('OVERLAP {count} cams', { count: overlapCount })
+        : t('ISOLATED VIEW'),
+      layerState._showProjection ? t('PROJ MONITOR') : t('PROJ OFF'),
+      layerState._coverageMode === 'viewshed' ? t('VIEWSHED') : null,
+      t('CAL {value}', {
+        value: calBadge.replace('-', ' ').toUpperCase(),
+      }),
       health?.sourceKind
-        ? `SRC ${String(health.sourceKind).toUpperCase()}`
-        : `SRC ${String(active.camera.feedType || 'image').toUpperCase()}`,
-      `${viewBand.toUpperCase()} CONTEXT`,
+        ? t('SRC {value}', {
+            value: String(health.sourceKind).toUpperCase(),
+          })
+        : t('SRC {value}', {
+            value: String(active.camera.feedType || 'image').toUpperCase(),
+          }),
+      t('{value} CONTEXT', { value: viewBand.toUpperCase() }),
     ]
       .filter(Boolean)
       .join(' · ');

@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import {
   cockpitEntryAllowed,
   isExplicitUserIntentOrigin,
@@ -58,12 +59,23 @@ export function _handleContextLayerChange(change) {
       if (this._contextSessionSnapshot && !this._contextModeChanging) {
         this._contextMode = null;
         void this._trackContextLayerReaction(
-          this._runUserFacingContextAction(async (notificationToken) => {
-            await this._restoreContextSessionAfterLayerSettles(change.layerId, {
-              notificationToken,
-            });
-            return true;
-          }, 'Space Missions cancellation could not restore the previous layer state'),
+          this._runUserFacingContextAction(
+            async (notificationToken) => {
+              await this._restoreContextSessionAfterLayerSettles(
+                change.layerId,
+                {
+                  notificationToken,
+                },
+              );
+              return true;
+            },
+            'Space Missions cancellation could not restore the previous layer state', // i18n-ignore: English message; the toast shows localizedMessage
+            {
+              localizedMessage: t(
+                'Space Missions cancellation could not restore the previous layer state',
+              ),
+            },
+          ),
         );
       }
     }
@@ -84,14 +96,17 @@ export function _handleContextLayerChange(change) {
     ) {
       this.showToast(
         change.reason ||
-          'That layer is unavailable in the current Context mode',
+          t('That layer is unavailable in the current Context mode'),
       );
     }
     this._syncContextModeButtons();
     return;
   }
   if (change?.type === 'visibility-failed') {
-    const failureMessage = `${change.layerId} could not ${change.enabled ? 'start' : 'stop'} cleanly`;
+    const failureMessage = t('{layerId} could not {action} cleanly', {
+      layerId: change.layerId,
+      action: change.enabled ? t('start') : t('stop'),
+    });
     // A failed direct Context-shell START has already had its siblings
     // cleared by the visibility guard. Wait outside the synchronous manager
     // notification for this queue to settle, then reconcile the complete

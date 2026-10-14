@@ -1,5 +1,6 @@
 import * as Cesium from 'cesium';
 import { isPickedWorldPosition } from '../data/scenePick.js';
+import { t } from '../i18n/index.js';
 
 function trackedTarget(viewer) {
   const entity = viewer.trackedEntity;
@@ -288,8 +289,8 @@ export function bindCameraOrientationControls({
       tiltButton?.setAttribute(
         'aria-label',
         next.tilted
-          ? 'Return map to straight-down view'
-          : 'Tilt map to oblique view',
+          ? t('Return map to straight-down view')
+          : t('Tilt map to oblique view'),
       );
     }
     if (!applied || applied.heading !== next.heading) {
@@ -297,7 +298,9 @@ export function bindCameraOrientationControls({
       northButton?.style?.setProperty('--camera-heading', `${next.heading}deg`);
       northButton?.setAttribute(
         'aria-label',
-        `Reset map to north up. Current heading ${next.heading} degrees`,
+        t('Reset map to north up. Current heading {heading} degrees', {
+          heading: next.heading,
+        }),
       );
     }
     applied = next;

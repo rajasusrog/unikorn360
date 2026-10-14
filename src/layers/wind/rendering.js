@@ -5,6 +5,7 @@ import {
 import { createWindRelief } from './relief.js';
 import { orderWeatherImagery } from '../weather/imageryOrder.js';
 import { NO_IMAGERY_HOST } from '../weather/imageryHost.js';
+import { msg } from '../../i18n/index.js';
 import { createWindGpuRendering } from './gpuRendering.js';
 import { advectParticle, sampleWind } from './model.js';
 import {
@@ -344,7 +345,7 @@ export function createWindRendering({
         ? !cesium.Primitive
         : !collection || !cesium.SingleTileImageryProvider
     ) {
-      imageryError = 'Globe imagery unavailable';
+      imageryError = msg('Globe imagery unavailable');
       return;
     }
     try {
@@ -384,12 +385,12 @@ export function createWindRendering({
       imagery.alpha = overlay === 'temperature' ? 1 : 0.85;
       if (gpuActive) updateImageryFade(viewer.scene.camera, true);
       imageryErrorRemove = provider.errorEvent?.addEventListener(() => {
-        imageryError = 'Globe field image unavailable';
+        imageryError = msg('Globe field image unavailable');
       });
       viewer.scene?.requestRender?.();
     } catch {
       removeImagery();
-      imageryError = 'Globe field image unavailable';
+      imageryError = msg('Globe field image unavailable');
     }
   }
 

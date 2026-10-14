@@ -3,6 +3,7 @@ import {
   PANO_FOV_DEFAULT_DEG,
   wrapDegrees,
 } from './panorama.js';
+import { t } from '../../../../i18n/index.js';
 import {
   FLAT_FULL_SIZE,
   FLAT_VIEW_SIZE,
@@ -436,11 +437,11 @@ export function createKartaViewViewer({
     root.setAttribute('role', 'group');
     root.setAttribute(
       'aria-label',
-      'KartaView photo. ← and → step along the sequence. On a 360° photo, drag or use Shift+← →, ↑ ↓ to look around, and + − to zoom',
+      t('KartaView photo. ← and → step along the sequence. On a 360° photo, drag or use Shift+← →, ↑ ↓ to look around, and + − to zoom'),
     );
     picture = doc.createElement('img');
     picture.className = 'sl-kv-photo';
-    picture.alt = 'KartaView street-level photo';
+    picture.alt = t('KartaView street-level photo');
     picture.draggable = false;
     picture.hidden = true;
     canvas = makeCanvas(doc);

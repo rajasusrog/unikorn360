@@ -1,5 +1,6 @@
 import * as Cesium from 'cesium';
 import { roadSurfaceChunks } from './surface.js';
+import { t } from '../../i18n/index.js';
 import {
   flowDensityMult,
   flowBucket,
@@ -260,10 +261,14 @@ export function createModel({ state: layerState, services, parts, source }) {
         mode,
         error: null,
         loadingLabel: fetching
-          ? 'Syncing flow · Roads: TomTom'
+          ? t('Syncing flow · Roads: {source}', { source: roadSource })
           : coveragePct > 0
-            ? 'LIVE · Roads: TomTom · Roads without flow hidden'
-            : 'LIVE · Roads: TomTom · No flow roads in view',
+            ? t('LIVE · Roads: {source} · Roads without flow hidden', {
+                source: roadSource,
+              })
+            : t('LIVE · Roads: {source} · No flow roads in view', {
+                source: roadSource,
+              }),
       };
     }
     if (liveMode && roadSource === 'TomTom + OpenStreetMap') {
@@ -271,8 +276,16 @@ export function createModel({ state: layerState, services, parts, source }) {
         mode,
         error: null,
         loadingLabel: fetching
-          ? `Syncing flow · Roads: ${roadSource}`
-          : `${coveragePct > 0 ? 'LIVE' : 'SIMULATED'} · Roads: ${roadSource} · Flow ${coveragePct}%`,
+          ? t('Syncing flow · Roads: {source}', { source: roadSource })
+          : coveragePct > 0
+            ? t('LIVE · Roads: {source} · Flow {percent}%', {
+                source: roadSource,
+                percent: coveragePct,
+              })
+            : t('SIMULATED · Roads: {source} · Flow {percent}%', {
+                source: roadSource,
+                percent: coveragePct,
+              }),
       };
     }
     if (liveMode) {
@@ -280,10 +293,24 @@ export function createModel({ state: layerState, services, parts, source }) {
         mode,
         error: null,
         loadingLabel: fetching
-          ? 'Syncing flow · Roads: OpenStreetMap · Flow: TomTom · Unmatched: simulated'
+          ? t(
+              'Syncing flow · Roads: OpenStreetMap · Flow: TomTom · Unmatched: simulated',
+            )
           : coveragePct > 0
-            ? `LIVE · Roads: OpenStreetMap · Flow: TomTom · ${coveragePct}% cov${coveragePct < 100 ? ' · Unmatched: simulated' : ''}`
-            : 'SIMULATED · Roads: OpenStreetMap · Flow: TomTom (no matches)',
+            ? coveragePct < 100
+              ? t(
+                  'LIVE · Roads: OpenStreetMap · Flow: TomTom · {percent}% cov · Unmatched: simulated',
+                  {
+                    percent: coveragePct,
+                  },
+                )
+              : t(
+                  'LIVE · Roads: OpenStreetMap · Flow: TomTom · {percent}% cov',
+                  {
+                    percent: coveragePct,
+                  },
+                )
+            : t('SIMULATED · Roads: OpenStreetMap · Flow: TomTom (no matches)'),
       };
     }
     // Keyless simulation — one terse line that names the mode and the remedy
@@ -293,8 +320,8 @@ export function createModel({ state: layerState, services, parts, source }) {
       mode,
       error: null,
       loadingLabel: statusUnavailable
-        ? 'SIMULATED — traffic service unreachable'
-        : 'SIMULATED — add TomTom key for live',
+        ? t('SIMULATED — traffic service unreachable')
+        : t('SIMULATED — add TomTom key for live'),
     };
   }
 

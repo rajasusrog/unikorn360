@@ -10,6 +10,7 @@ import {
   inciwebNodeId,
   isCurrentPublication,
 } from './inciweb.js';
+import { t } from '../../i18n/index.js';
 export { normalizeFirePerimeterSnapshot } from './records.js';
 export { createWfigsPerimeterSource } from './source.js';
 export * from './cards.js';
@@ -414,10 +415,10 @@ export function createFirePerimetersLayer({
 
     getRowControls() {
       const bands = [
-        { label: 'Not contained or unknown', color: containmentAccent(0) },
-        { label: 'Under 50% contained', color: containmentAccent(1) },
-        { label: '50–99% contained', color: containmentAccent(50) },
-        { label: 'Fully contained', color: containmentAccent(100) },
+        { label: t('Not contained or unknown'), color: containmentAccent(0) },
+        { label: t('Under 50% contained'), color: containmentAccent(1) },
+        { label: t('50–99% contained'), color: containmentAccent(50) },
+        { label: t('Fully contained'), color: containmentAccent(100) },
       ];
       return {
         chips: [],
@@ -428,8 +429,9 @@ export function createFirePerimetersLayer({
           ).length,
           ...(index === 0
             ? {
-                blurb:
+                blurb: t(
                   'Colour shows reported containment. Perimeters are simplified to about 100 m.',
+                ),
               }
             : {}),
         })),

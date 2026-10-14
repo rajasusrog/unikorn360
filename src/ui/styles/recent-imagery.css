@@ -293,17 +293,34 @@
   height: 18px;
   font-weight: 700;
 }
+/* Outside A / B there is one chip (SHOW): it takes the whole row, so a long
+   translation is not cut to a stub. */
+.recent-imagery-readout:not([data-mode='ab'])
+  .ri-card-chips
+  .ri-chip[data-slot='a'] {
+  grid-column: 1 / -1;
+}
+.recent-imagery-readout:not([data-mode='ab'])
+  .ri-card-chips
+  .ri-chip[data-slot='b'] {
+  display: none;
+}
 
-/* 4. The selection bar: mode, then two rows that are always there. */
+/* 4. The selection bar: mode, then two rows that are always there. The slot
+   rows share the bar's columns (subgrid), so the tag column fits the longest
+   tag in either row and both rows stay aligned. */
 .recent-imagery-readout .ri-selection {
   display: grid;
+  grid-template-columns: minmax(44px, max-content) minmax(0, 1fr) 22px;
   grid-template-rows: 20px 20px 20px;
+  column-gap: 6px;
   row-gap: 4px;
   padding: 5px;
   border: 1px solid var(--weather-card-border);
   border-radius: 6px;
 }
 .recent-imagery-readout .ri-mode {
+  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
@@ -312,14 +329,16 @@
   height: 20px;
 }
 .recent-imagery-readout .ri-slot {
+  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 22px;
+  grid-template-columns: subgrid;
   align-items: center;
   column-gap: 6px;
   height: 20px;
 }
 .recent-imagery-readout .ri-slot-tag {
   height: 16px;
+  padding: 0 3px;
   line-height: 16px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 3px;
@@ -347,6 +366,15 @@
   color: var(--text-secondary);
   font-style: italic;
 }
+/* A translated slot line (date · source · resolution · state) is longer:
+   let it take a second line rather than cut off the state at the end. */
+html:not([lang='en']) .recent-imagery-readout .ri-slot {
+  height: auto;
+  min-height: 20px;
+}
+html:not([lang='en']) .recent-imagery-readout .ri-slot-value {
+  white-space: normal;
+}
 .recent-imagery-readout .ri-unpin {
   width: 22px;
   padding: 0;
@@ -355,19 +383,25 @@
 }
 
 /* 5. Opacity (both images), SWAP and export, one row. SWAP keeps its slot
-   while no swipe is live. */
+   while no swipe is live. A label longer than its 76px column widens it to
+   the label's longest word, and the value wraps under the label. */
 .recent-imagery-readout .ri-controls {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) 40px 128px;
+  grid-template-columns:
+    minmax(76px, min-content) minmax(0, 1fr) minmax(40px, max-content)
+    128px;
   align-items: center;
   column-gap: 6px;
   height: 22px;
 }
 .recent-imagery-readout .ri-opacity-label {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 4px;
+  align-content: center;
+  column-gap: 4px;
   font-size: 8px;
+  line-height: 10px;
   letter-spacing: 1px;
   white-space: nowrap;
 }
@@ -385,7 +419,7 @@
   opacity: 0.35;
 }
 .recent-imagery-readout .ri-swap {
-  width: 40px;
+  min-width: 40px;
   padding: 0 2px;
 }
 .recent-imagery-readout .ri-exports .rail-card-actions {
