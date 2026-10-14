@@ -102,6 +102,101 @@ export function installTrackpadPinchZoom(
   };
 }
 
+/**
+ * Clamp viewer.resolutionScale so that the canvas dimensions never exceed the
+ * GPU's maximum texture size, preventing GlobeDepth and framebuffer texture
+ * allocation DeveloperErrors on 2K/4K and fullscreen displays (#905).
+ *
+ * Keeps requested scale and hardware ceiling separate (credit #940): applies
+ * min(requested, hardware ceiling) and restores the requested scale when the
+ * viewport shrinks.
+ */
+export function clampResolutionToTextureLimits(
+  viewer,
+  {
+    getLimit = () => Cesium?.ContextLimits?.maximumTextureSize ?? 0,
+    getPixelRatio = () =>
+      (typeof window !== 'undefined' && window.devicePixelRatio) || 1.0,
+  } = {},
+) {
+  const maxTextureSize = getLimit();
+  if (!Number.isFinite(maxTextureSize) || maxTextureSize <= 0) return;
+
+  const canvas = viewer?.canvas;
+  const width =
+    canvas?.clientWidth ||
+    (typeof window !== 'undefined' ? window.innerWidth : 0);
+  const height =
+    canvas?.clientHeight ||
+    (typeof window !== 'undefined' ? window.innerHeight : 0);
+  const maxDim = Math.max(width, height);
+  if (maxDim <= 0) return;
+
+  const useBrowserRecommended = viewer?.useBrowserRecommendedResolution ?? true;
+  const pixelRatio = useBrowserRecommended ? 1.0 : getPixelRatio();
+  const effectiveMaxDim = maxDim * (pixelRatio > 0 ? pixelRatio : 1.0);
+  const maxAllowedScale = maxTextureSize / effectiveMaxDim;
+
+  if (viewer._requestedResolutionScale === undefined) {
+    viewer._requestedResolutionScale = viewer.resolutionScale ?? 1.0;
+  } else if (
+    viewer.resolutionScale !== viewer._appliedResolutionScale &&
+    viewer.resolutionScale !== undefined
+  ) {
+    viewer._requestedResolutionScale = viewer.resolutionScale;
+  }
+
+  const requested = viewer._requestedResolutionScale;
+  const clamped = Math.min(requested, maxAllowedScale);
+  viewer._appliedResolutionScale = clamped;
+  viewer.resolutionScale = clamped;
+}
+
+/**
+ * Install a resize and fullscreen listener that continuously guarantees the
+ * drawing buffer fits within the GPU's texture size limit. Returns a disposer.
+ */
+export function installTextureLimitGuard(
+  viewer,
+  {
+    getLimit = () => Cesium?.ContextLimits?.maximumTextureSize ?? 0,
+    getPixelRatio = () =>
+      (typeof window !== 'undefined' && window.devicePixelRatio) || 1.0,
+    windowTarget = globalThis.window,
+  } = {},
+) {
+  const enforce = () =>
+    clampResolutionToTextureLimits(viewer, { getLimit, getPixelRatio });
+  enforce();
+
+  let unlistenResize = null;
+  if (windowTarget?.addEventListener) {
+    windowTarget.addEventListener('resize', enforce);
+    unlistenResize = () => windowTarget.removeEventListener('resize', enforce);
+  }
+
+  let unlistenPreRender = null;
+  if (viewer?.scene?.preRender?.addEventListener) {
+    const preRenderListener = () => enforce();
+    viewer.scene.preRender.addEventListener(preRenderListener);
+    unlistenPreRender = () => {
+      try {
+        viewer.scene.preRender.removeEventListener(preRenderListener);
+      } catch {
+        /* ignore */
+      }
+    };
+  }
+
+  let active = true;
+  return () => {
+    if (!active) return;
+    active = false;
+    unlistenResize?.();
+    unlistenPreRender?.();
+  };
+}
+
 /** Create the standard globe viewer in caller-owned, visible containers. */
 export function createApplicationViewer({ container, creditContainer }) {
   if (!container || !creditContainer)
@@ -134,6 +229,14 @@ export function createApplicationViewer({ container, creditContainer }) {
     viewer.scene.skyAtmosphere.atmosphereLightIntensity = 18;
     viewer.scene.skyAtmosphere.saturationShift = -0.12;
     viewer.scene.skyAtmosphere.brightnessShift = -0.08;
+
+    const uninstallGuard = installTextureLimitGuard(viewer);
+    const originalDestroy = viewer.destroy.bind(viewer);
+    viewer.destroy = () => {
+      uninstallGuard();
+      return originalDestroy();
+    };
+
     return viewer;
   } catch (error) {
     viewer.destroy();

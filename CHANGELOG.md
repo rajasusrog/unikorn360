@@ -1,5 +1,11 @@
 # Changelog
 
+- Clamp `viewer.resolutionScale` to the WebGL context's maximum texture size
+  (`Cesium.ContextLimits.maximumTextureSize`) on high-resolution (2K/4K) and fullscreen
+  displays, preventing GlobeDepth and framebuffer texture allocation crashes.
+  Preserves requested scaling when the viewport shrinks. Thanks to
+  [xiehuanyi](https://github.com/xiehuanyi) (#940) for separating requested and effective scale.
+
 - Add New York City traffic cameras from the NYC DOT Traffic Management Center
   as an opt-in CCTV pack. NYC DOT requires a data-sharing agreement for the
   camera feed, so the pack is off unless `CCTV_NYC_ENABLED=1` is set by an
