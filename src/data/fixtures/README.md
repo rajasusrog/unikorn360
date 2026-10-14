@@ -41,3 +41,13 @@
   2026-09-25. Each record names its XYZ tile and expected traffic eligibility.
   Modified, test-only OpenStreetMap data; same ODbL attribution and database
   share-alike terms as the OpenFreeMap fixtures above.
+
+- `trafficsa-points-sample.json` and `trafficsa-lines.json` — Traffic SA open
+  data from the keyless ArcGIS MapServer
+  `maps.sa.gov.au/arcgis/rest/services/DPTIExtTransport/TrafficSAOpenData/MapServer`,
+  retrieved 2026-10-13. The points file is 12 of the 1,321 layer 0 features
+  (one incident, six 24 h roadworks, five roadworks) with original geometry and
+  attributes; the lines file is all 8 layer 1 closure features, unmodified.
+  Note the upstream date fields carry Adelaide wall-clock time encoded as UTC.
+  © Department for Infrastructure and Transport, Government of South Australia,
+  CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Test-only.

@@ -202,8 +202,8 @@ function encode(state) {
 
 test('production registry is exact, canonical, and rejects incomplete contracts', async () => {
   assert.equal(validateLayerStateRegistry(), true);
-  assert.equal(REGISTERED_LAYER_IDS.length, 29);
-  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 29);
+  assert.equal(REGISTERED_LAYER_IDS.length, 30);
+  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 30);
   assert.ok(REGISTERED_LAYER_IDS.includes('transit'));
   assert.deepEqual(REGISTERED_LAYER_IDS, [...REGISTERED_LAYER_IDS].sort());
   assert.deepEqual(LEGACY_LAYER_STATE_TOKENS, {
@@ -242,19 +242,25 @@ test('production registry is exact, canonical, and rejects incomplete contracts'
   for (const [id, token] of Object.entries(LEGACY_LAYER_STATE_TOKENS)) {
     assert.equal(LAYER_STATE_TOKEN_RESERVATIONS[id], token);
   }
-  assert.equal(nextLayerStateToken(), '3');
+  // Scenarios below claim the live ledger's next free digits rather than
+  // literal ones, so they keep testing the same rules as layers merge.
+  const reservedTokens = new Set(Object.values(LAYER_STATE_TOKEN_RESERVATIONS));
+  const FREE_DIGITS = [...'0123456789'].filter((d) => !reservedTokens.has(d));
+  assert.ok(FREE_DIGITS.length >= 3, 'scenarios need three free digits');
+  const [NEXT_A, NEXT_B, NEXT_C] = FREE_DIGITS;
+  assert.equal(nextLayerStateToken(), NEXT_A);
   assert.equal(
     nextLayerStateToken({
       ...LAYER_STATE_TOKEN_RESERVATIONS,
-      alpha: '3',
-      bravo: '4',
+      alpha: NEXT_A,
+      bravo: NEXT_B,
     }),
-    '5',
+    NEXT_C,
   );
   const digitsExhausted = {
     ...LAYER_STATE_TOKEN_RESERVATIONS,
     ...Object.fromEntries(
-      [...'3456789'].map((digit) => [`prior-${digit}`, digit]),
+      FREE_DIGITS.map((digit) => [`prior-${digit}`, digit]),
     ),
   };
   assert.equal(nextLayerStateToken(digitsExhausted), '00');
@@ -307,8 +313,8 @@ test('production registry is exact, canonical, and rejects incomplete contracts'
   assert.equal(
     validateLayerStateAllocations(LAYER_STATE_TOKEN_RESERVATIONS, {
       ...LAYER_STATE_TOKEN_RESERVATIONS,
-      future: '3',
-      next: '4',
+      future: NEXT_A,
+      next: NEXT_B,
     }),
     true,
   );
@@ -318,7 +324,7 @@ test('production registry is exact, canonical, and rejects incomplete contracts'
         ...LAYER_STATE_TOKEN_RESERVATIONS,
         future: '00',
       }),
-    /next free token 3/,
+    new RegExp(`next free token ${NEXT_A}`),
   );
   const beforeLastDigit = { ...digitsExhausted };
   delete beforeLastDigit['prior-9'];
@@ -341,10 +347,10 @@ test('production registry is exact, canonical, and rejects incomplete contracts'
   assert.throws(
     () =>
       validateLayerStateAllocations(
-        { ...LAYER_STATE_TOKEN_RESERVATIONS, merged: '3' },
-        { ...LAYER_STATE_TOKEN_RESERVATIONS, merged: '3', competing: '3' },
+        { ...LAYER_STATE_TOKEN_RESERVATIONS, merged: NEXT_A },
+        { ...LAYER_STATE_TOKEN_RESERVATIONS, merged: NEXT_A, competing: NEXT_A },
       ),
-    /next free token 4/,
+    new RegExp(`next free token ${NEXT_B}`),
   );
   assert.throws(
     () => validateLayerStateAllocations({ future: '00' }, { future: '01' }),
@@ -2649,6 +2655,23 @@ test('fire perimeters uses digit 2 without colliding with wind or recent imagery
   assert.equal(
     LAYER_STATE_REGISTRY.find(({ id }) => id === 'fire-perimeters').token,
     '2',
+  );
+  assert.deepEqual(
+    decodeLayerStateParams(new URLSearchParams(encode(decoded))),
+    decoded,
+  );
+});
+
+test('sa road events uses digit 3 without colliding with other layers', () => {
+  const decoded = decodeLayerStateParams(new URLSearchParams('v=2&l=3.2.k'));
+  assert.deepEqual(decoded.enabledLayerIds, [
+    'fire-perimeters',
+    'sa-road-events',
+    'wind',
+  ]);
+  assert.equal(
+    LAYER_STATE_REGISTRY.find(({ id }) => id === 'sa-road-events').token,
+    '3',
   );
   assert.deepEqual(
     decodeLayerStateParams(new URLSearchParams(encode(decoded))),
