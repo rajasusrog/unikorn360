@@ -224,3 +224,28 @@ test('an area search names its area to the server; a vessel lookup asks for ever
   assert.equal(lookup.has('lat'), false);
   assert.equal(lookup.has('radius_km'), false);
 });
+
+test('vessels in an area can be counted by destination with a speed summary', async () => {
+  const catalog = composeCatalog({
+    tools: coreTools,
+    services: { vessels: vessels() },
+  });
+  const result = await catalog.call('vessels_in_area', {
+    area: bay,
+    group_by: 'destination',
+    stats: true,
+  });
+  assert.equal(
+    result.summary,
+    '2 vessels in 20 km around 37.780, -122.400; most by destination: OAKLAND (1); 1 unknown.',
+  );
+  assert.deepEqual(result.data.breakdown, {
+    field: 'destination',
+    groups: [{ value: 'OAKLAND', count: 1 }],
+    other_count: 0,
+    unknown_count: 1,
+  });
+  assert.deepEqual(result.data.stats, {
+    speed_mps: { count: 2, min: 6.2, median: 6.2, mean: 6.2, max: 6.2 },
+  });
+});

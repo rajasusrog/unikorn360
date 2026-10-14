@@ -12,9 +12,12 @@ import {
 } from '../area.js';
 import {
   LIMIT_SCHEMA,
+  breakdown,
+  breakdownPhrase,
   capRows,
   countNoun,
   isoTime,
+  numericSummary,
   thinEvenly,
 } from '../results.js';
 
@@ -88,7 +91,9 @@ export const vesselsInArea = defineTool({
   title: 'Vessels in an area',
   description:
     'Ships currently reported by AIS inside an area, nearest the center ' +
-    'first, optionally filtered by vessel type.',
+    'first, optionally filtered by vessel type. group_by counts every matched ' +
+    'ship by type or destination, and stats summarizes their speed; both ' +
+    'cover all matches, not just the rows returned.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -98,6 +103,15 @@ export const vesselsInArea = defineTool({
         minLength: 1,
         maxLength: 40,
         description: 'Vessel type to match, such as "tanker" or "cargo".',
+      },
+      group_by: {
+        type: 'string',
+        enum: ['type', 'destination'],
+        description: 'Count matched vessels by this field, largest first.',
+      },
+      stats: {
+        type: 'boolean',
+        description: 'Summarize speed over matched vessels.',
       },
       limit: LIMIT_SCHEMA,
     },
@@ -119,13 +133,19 @@ export const vesselsInArea = defineTool({
       .map((record) => vesselRow(record, center))
       .sort((a, b) => a.distance_km - b.distance_km);
     const kind = args.type ? `${args.type} vessel` : 'vessel';
+    const groups = args.group_by ? breakdown(rows, args.group_by) : null;
     return {
       summary:
         `${countNoun(rows.length, kind)} in ${area.label}` +
+        (groups ? breakdownPhrase(groups, args.group_by) : '') +
         (snapshot.freshness === 'stale' ? ' (data may be stale).' : '.'),
       data: {
         view: suggestView(services, { area, layers: ['ais-live-vessels'] }),
         ...capRows(rows, args.limit),
+        ...(groups ? { breakdown: groups } : {}),
+        ...(args.stats
+          ? { stats: { speed_mps: numericSummary(rows, 'speed_mps') } }
+          : {}),
         ...snapshotInfo(snapshot),
       },
     };
