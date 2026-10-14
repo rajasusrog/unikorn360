@@ -65,6 +65,33 @@ export const ACTION_DESCRIPTIONS = {
       },
     },
   },
+  show_street_level: {
+    description:
+      'Street-level photos of a place: "show me X on Street View", "X on Mapillary", "street-level imagery of X". One call flies there, switches the map when the source needs it (Google Street View shows only on Google 3D; each panorama is billed to the Google Maps key), lights the source in STREET LEVEL, turns the layer on and opens the nearest photo. No query: the view centre.',
+    $position: 1,
+    parameters: {
+      properties: {
+        query: {
+          description:
+            'Place name or address. "pointer" = the spot under the cursor.',
+          $position: 1,
+        },
+        provider: {
+          description:
+            'google for "Street View"; mapillary, kartaview by name; omit otherwise (the lit source).',
+          $position: 1,
+        },
+        fly: {
+          description: 'Omit; false keeps the camera still.',
+          $position: 1,
+        },
+        referent: {
+          description: 'Numbered item n from the last result list.',
+          $position: 1,
+        },
+      },
+    },
+  },
   adjust_camera_zoom: {
     description:
       'Move the current Cesium camera closer to or farther from what it is presently looking at. Use for relative zoom requests without changing location.',

@@ -251,6 +251,81 @@ function selectNearestAircraft(result) {
   };
 }
 
+/** Month and year an image was captured, or ''. */
+function capturedMonth(capturedAt) {
+  const ms = Number(capturedAt);
+  if (!Number.isFinite(ms) || ms <= 0) return '';
+  try {
+    // Dates are UTC months (Google: the first of the month).
+    return new Date(ms).toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+  } catch {
+    return '';
+  }
+}
+
+function showStreetLevel(result) {
+  // `location` is the flight's own result on a failed flight; its label is
+  // the place, never the object.
+  const place = spokenLabel(
+    result?.label ||
+      (typeof result?.location === 'string'
+        ? result.location
+        : result?.location?.label) ||
+      'there',
+  );
+  const source = spokenLabel(result?.providerName || 'Street Level');
+  if (result?.cancelled) return null;
+  if (!result?.ok) {
+    let say;
+    if (result?.stage === 'location') say = `Couldn't find ${place}.`;
+    else if (result?.stage === 'map')
+      say = `${source} needs the Google 3D map, which isn't available.`;
+    else if (result?.stage === 'key')
+      say = result?.keyRejected
+        ? `${source} refused its key.`
+        : `${source} needs its key.`;
+    else if (result?.stage === 'layer') say = "Couldn't turn on Street Level.";
+    else if (result?.stage === 'imagery')
+      say = result?.filter?.label
+        ? `No ${source} imagery near ${place} with the ${result.filter.label} on.`
+        : `No ${source} imagery near ${place}.`;
+    else say = `Couldn't open ${source}.`;
+    return {
+      say,
+      display: {
+        title: source,
+        lines: [result?.error].filter(Boolean),
+        sources: [],
+      },
+    };
+  }
+  if (result.armed === true)
+    return {
+      say: sentence(`${source} is ready at ${place}: press OPEN to load it`),
+      display: {
+        title: source,
+        lines: [place, 'Press OPEN to load the photo'],
+        sources: [{ label: source }],
+      },
+    };
+  const title = spokenLabel(result.title || '', 60);
+  const month = capturedMonth(result.capturedAt);
+  return {
+    say: sentence(`${source} at ${title || place}`),
+    display: {
+      title: source,
+      lines: [title || place, month ? `Captured ${month}` : null].filter(
+        Boolean,
+      ),
+      sources: [{ label: source }],
+    },
+  };
+}
+
 function routeText(properties) {
   const route = spokenLabel(properties.route || '', 40);
   if (route) return route.replace(/\s*(?:-|→|>)\s*/g, ' to ');
@@ -432,6 +507,7 @@ export const SPEECH_BUILDERS = Object.freeze({
   fly_to_location: flyToLocation,
   frame_overhead: frameOverhead,
   select_nearest_aircraft: selectNearestAircraft,
+  show_street_level: showStreetLevel,
   get_entity_context: getEntityContext,
   get_current_view_state: getCurrentViewState,
   annotate_map: annotateMap,
@@ -487,6 +563,13 @@ function annotationTargets(args) {
     .filter(Boolean);
 }
 
+/** Street-level sources as a plan step names them. */
+const STREET_LEVEL_SOURCE_NAMES = Object.freeze({
+  google: 'Street View',
+  mapillary: 'Mapillary',
+  kartaview: 'KartaView',
+});
+
 /** A short on-screen label for one tool call in the voice card's plan. */
 export function planStepLabel(name, args = {}) {
   switch (name) {
@@ -500,6 +583,8 @@ export function planStepLabel(name, args = {}) {
       return `Fly to ${displayName(args.query || args.locationId || 'location', 40)}`;
     case 'select_nearest_aircraft':
       return `Nearest aircraft to ${displayName(args.locationQuery || args.locationId || 'here', 32)}`;
+    case 'show_street_level':
+      return `${STREET_LEVEL_SOURCE_NAMES[args.provider] || 'Street level'} at ${displayName(args.query || (args.latitude != null ? 'this spot' : 'the view centre'), 32)}`;
     case 'set_layer_visibility':
       return `${displayName(args.layerId || 'Layer', 32)} ${args.enabled === false ? 'off' : 'on'}`;
     case 'get_entity_context':
@@ -525,6 +610,8 @@ export function narrationLabel(name, args = {}) {
       return displayName(args.query || args.locationId || '', 32);
     case 'select_nearest_aircraft':
       return displayName(args.locationQuery || args.locationId || '', 32);
+    case 'show_street_level':
+      return displayName(args.query || '', 32);
     default:
       return '';
   }
@@ -539,6 +626,8 @@ const STEP_LABELS = Object.freeze({
   layer: 'Turning on layer',
   refresh: 'Loading aircraft',
   nearest: 'Picking nearest',
+  map: 'Switching map',
+  imagery: 'Opening imagery',
 });
 
 /** On-screen label for a progress step. */
@@ -566,6 +655,12 @@ export function progressLine(step, label) {
       return 'Loading aircraft there.';
     case 'nearest':
       return 'Picking the nearest aircraft.';
+    case 'map':
+      return place === 'photoreal'
+        ? 'Switching to Google 3D.'
+        : 'Switching the map.';
+    case 'imagery':
+      return place ? `Looking for imagery at ${place}.` : null;
     case 'still':
       return place ? `Still working on ${place}.` : 'Still working on it.';
     default:
