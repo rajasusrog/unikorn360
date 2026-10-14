@@ -1,5 +1,8 @@
 # Changelog
 
+- Allow Bing Maps HTTP tile origins (`ecn.t0-3` and `ak.dynamic.t0-3`) in Content-Security-Policy
+  for Bing Aerial and Bing Labels under Cesium ion on local development and preview pages.
+
 - Add New York City traffic cameras from the NYC DOT Traffic Management Center
   as an opt-in CCTV pack. NYC DOT requires a data-sharing agreement for the
   camera feed, so the pack is off unless `CCTV_NYC_ENABLED=1` is set by an

@@ -1,5 +1,9 @@
 # God's Eye View Current State
 
+Content-Security-Policy permits explicit plaintext tile origins for Bing Maps
+(`http://ecn.t[0-3].tiles.virtualearth.net` for Bing Aerial and `http://ak.dynamic.t[0-3].tiles.virtualearth.net` for Bing Labels)
+in `connect-src` to support Cesium ion Bing basemaps when running on unencrypted local development origins.
+
 Vessel sources can report healthy empty coverage using a current, complete
 snapshot with zero raw rows, a healthy transport and a positive last-message
 time. This clears obsolete contacts and settles startup without manufacturing

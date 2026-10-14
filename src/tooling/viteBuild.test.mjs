@@ -182,6 +182,31 @@ test('only embed-mode documents may be framed, and only by the allowed ancestors
     assert.equal(plugin.configurePreviewServer, undefined);
   }
 });
+test('the CSP admits only Bing HTTP tile hosts, not arbitrary plaintext connections', () => {
+  const connect = BROWSER_CSP.split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith('connect-src '))
+    ?.split(/\s+/)
+    .slice(1);
+
+  assert.ok(connect);
+  assert.ok(connect.includes('https:'));
+  assert.ok(connect.includes('wss:'));
+  for (const host of [
+    'http://ecn.t0.tiles.virtualearth.net',
+    'http://ecn.t1.tiles.virtualearth.net',
+    'http://ecn.t2.tiles.virtualearth.net',
+    'http://ecn.t3.tiles.virtualearth.net',
+    'http://ak.dynamic.t0.tiles.virtualearth.net',
+    'http://ak.dynamic.t1.tiles.virtualearth.net',
+    'http://ak.dynamic.t2.tiles.virtualearth.net',
+    'http://ak.dynamic.t3.tiles.virtualearth.net',
+  ]) {
+    assert.ok(connect.includes(host), host);
+  }
+  assert.ok(!connect.includes('http:'));
+  assert.ok(!connect.some((source) => source.includes('*')));
+});
 
 test('the CSP admits the event media embeds and the Maps JavaScript API, and no other script origin', async () => {
   const { embeddedMediaFrameUrl, resolveEmbeddedMediaSource } =
