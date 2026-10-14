@@ -2225,7 +2225,13 @@
       "src/tools/functions.js",
       "src/voice/actionSchemas.js",
       "src/view/index.js",
-      "src/app/embed.js"
+      "src/app/embed.js",
+      "src/layers/bomRadar/records.js",
+      "src/layers/bomRadar/source.js",
+      "src/layers/bomRadar/select.js",
+      "src/layers/bomRadar/rendering.js",
+      "src/layers/bomRadar/index.js",
+      "src/app/layers/bomRadar.js"
     ],
     "external": [
       "hls.js",
@@ -2760,7 +2766,13 @@
       "src/data/local_data/osm_military_names/names.json",
       "src/layers/installations/namedMarkers.js",
       "src/data/infrastructureOverlayEntry.js",
-      "src/sources/infrastructureData.js"
+      "src/sources/infrastructureData.js",
+      "src/layers/bomRadar/rendering.js",
+      "src/layers/bomRadar/select.js",
+      "src/layers/bomRadar/records.js",
+      "src/layers/bomRadar/source.js",
+      "src/layers/bomRadar/index.js",
+      "src/app/layers/bomRadar.js"
     ],
     "external": [
       "hls.js",
