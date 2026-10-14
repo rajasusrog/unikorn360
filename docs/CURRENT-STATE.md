@@ -97,6 +97,10 @@ lists at 25 rows by default. Voice offers the same queries next to its app
 actions: the session lists them, and the browser runs them through the same
 catalog, loaded on first use. See [tools and the MCP server](TOOLS.md).
 
+Catalog calls check their cancellation signal immediately before executing a
+tool. Already-cancelled queries do not start; cancellation after execution starts
+continues to follow the existing tool and caller behavior.
+
 ## Cyber HUD — September 30, 2026
 
 Display > HUD > Layout includes Cyber, also available through the HUD voice
