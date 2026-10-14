@@ -1,5 +1,7 @@
 # Changelog
 
+- Malformed v2 share links now display `Shared layer selection could not be restored` after startup instead of silently falling back to defaults. Thanks to [daikaginza](https://github.com/daikaginza) for reporting #776 and [KnottyDyes](https://github.com/KnottyDyes) for independently identifying the silent layer-state drop.
+
 - The right rail ignores panels that other CSS hides, such as during an event
   view, so they no longer force one-panel-at-a-time layout or collapse visible
   panels. Panels the rail collapses itself are still restored.
