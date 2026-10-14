@@ -1,5 +1,10 @@
 # Changelog
 
+- Prevent a compact Radio disclosure from covering Space Missions when the
+  adaptive right rail restores Context without calling the panel owner.
+  Repeated Context-open calls and rail-driven expansion both close the mini,
+  with a regression for auto-collapse restoration (raysung-2026, #804).
+
 - Snow flakes sway within a fixed range instead of drifting sideways faster the
   longer the app runs; the Wind setting still scales the sway.
 
