@@ -48,6 +48,7 @@ export function ingestAisStreamEnvelope(envelope) {
       type: vesselTypeFromAis(message, _aisStreamStatic.get(mmsi)),
       destination: stringValue(message.Destination),
       imo: stringValue(message.ImoNumber ?? message.IMO),
+      _updatedAt: Date.now(),
     };
     _aisStreamStatic.set(mmsi, staticData);
     mergeAisStaticIntoLiveVessel(mmsi, staticData);
@@ -91,7 +92,7 @@ export function ingestAisStreamEnvelope(envelope) {
     aisEpochSeconds(metadata.time_utc ?? metadata.TimeUtc),
   );
 
-  pruneAisStreamCache();
+  maybePruneAisStreamCache();
   return true;
 }
 
@@ -228,20 +229,48 @@ export function aisStreamRows(maxRows) {
   return rows.slice(0, maxRows).map(({ _updatedAt, ...row }) => row);
 }
 
-function pruneAisStreamCache() {
+let _lastPruneAt = 0;
+const AIS_PRUNE_INTERVAL_MS = 10_000;
+
+function maybePruneAisStreamCache() {
+  const now = Date.now();
+  if (
+    now - _lastPruneAt >= AIS_PRUNE_INTERVAL_MS ||
+    (_aisStreamVessels.size > AISSTREAM_CACHE_MAX &&
+      now - _lastPruneAt >= 1_000)
+  ) {
+    _lastPruneAt = now;
+    pruneAisStreamCache();
+  }
+}
+
+export function pruneAisStreamCache() {
   const cutoff = Date.now() - AISSTREAM_STALE_MS;
   for (const [mmsi, row] of _aisStreamVessels) {
     if (row._updatedAt < cutoff) {
       _aisStreamVessels.delete(mmsi);
       _aisStreamTracks.delete(mmsi);
       _aisStreamTrackPending.delete(mmsi);
+      _aisStreamStatic.delete(mmsi);
     }
   }
   // Pending single-fix entries for vessels never seen again must not leak
   const pendingCutoffSec = Math.floor(cutoff / 1000);
   for (const [mmsi, pending] of _aisStreamTrackPending) {
-    if (pending.epochSec < pendingCutoffSec)
+    if (pending.epochSec < pendingCutoffSec) {
       _aisStreamTrackPending.delete(mmsi);
+      _aisStreamStatic.delete(mmsi);
+    }
+  }
+  // Stale static records for vessels with no active position or pending track
+  for (const [mmsi, staticData] of _aisStreamStatic) {
+    if (
+      !_aisStreamVessels.has(mmsi) &&
+      !_aisStreamTrackPending.has(mmsi) &&
+      (staticData._updatedAt ? staticData._updatedAt < cutoff : true)
+    ) {
+      _aisStreamStatic.delete(mmsi);
+    }
   }
   if (_aisStreamVessels.size <= AISSTREAM_CACHE_MAX) return;
   const ordered = [..._aisStreamVessels.entries()].sort(
@@ -254,6 +283,7 @@ function pruneAisStreamCache() {
     _aisStreamVessels.delete(mmsi);
     _aisStreamTracks.delete(mmsi);
     _aisStreamTrackPending.delete(mmsi);
+    _aisStreamStatic.delete(mmsi);
   }
 }
 

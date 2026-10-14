@@ -297,29 +297,37 @@ export function createKartaViewViewer({
    * way after an earlier press, and open it through the core.
    */
   function stepBy(delta) {
-    steps = steps.then(async () => {
-      const fromId = openingId ?? photo?.id;
-      if (!fromId || !root) return;
-      let from;
-      let nextId = null;
-      try {
-        from = await getPhoto(fromId);
-        if (from.sequenceId) nextId = await step(from, delta);
-      } catch {
-        // Not the end of the sequence, just no answer: the press is lost.
-        return;
-      }
-      // Closed, or another photo was opened meanwhile.
-      if ((openingId ?? photo?.id) !== fromId) return;
-      if (!nextId) {
-        const button = delta < 0 ? prevButton : nextButton;
-        if (button && photo?.id === fromId) disable(button);
-        return;
-      }
-      openingId = nextId;
-      keepViewFor = nextId;
-      onStep(nextId);
-    });
+    steps = steps
+      .then(async () => {
+        const fromId = openingId ?? photo?.id;
+        if (!fromId || !root) return;
+        let from;
+        let nextId = null;
+        try {
+          from = await getPhoto(fromId);
+          if (from.sequenceId) nextId = await step(from, delta);
+        } catch {
+          // Not the end of the sequence, just no answer: the press is lost.
+          return;
+        }
+        // Closed, or another photo was opened meanwhile.
+        if ((openingId ?? photo?.id) !== fromId) return;
+        if (!nextId) {
+          const button = delta < 0 ? prevButton : nextButton;
+          if (button && photo?.id === fromId) disable(button);
+          return;
+        }
+        openingId = nextId;
+        keepViewFor = nextId;
+        try {
+          await onStep(nextId);
+        } catch {
+          if (openingId === nextId) openingId = photo?.id ?? null;
+        }
+      })
+      .catch(() => {
+        // Keep the chain unbroken if an unexpected rejection occurs.
+      });
   }
 
   /** Pointers on the panorama: one drags the view, two pinch the zoom. */

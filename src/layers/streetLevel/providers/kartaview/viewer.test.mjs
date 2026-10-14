@@ -982,3 +982,37 @@ test('a preview or sharper version nobody will draw is freed, not left decoded',
   assert.match(closed[1], /rs:fit:2048/, 'the overtaken sharp version');
   assert.equal(renderers[0].images.length, 1, 'only the preview was drawn');
 });
+
+test('an error or rejection in onStep does not break subsequent step navigation clicks', async () => {
+  let shouldFail = true;
+  const stepped = [];
+  const host = fakeHost();
+  const viewer = createKartaViewViewer({
+    getPhoto: async (id) => PHOTOS[id],
+    step: async (photo, delta) => (delta > 0 ? 'flat2' : null),
+    onStep: async (id) => {
+      stepped.push(id);
+      if (shouldFail) {
+        shouldFail = false;
+        throw new Error('transient onStep failure');
+      }
+      await viewer.open(id).catch(() => {});
+    },
+    load: async (url) => ({ src: url, close: () => {} }),
+  });
+  await viewer.mount(host);
+  await viewer.open('flat1');
+  const { next } = parts(host);
+  assert.ok(next);
+
+  // First press throws inside onStep
+  next.fire('click');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(stepped.length, 1);
+
+  // Second press MUST still execute and not be blocked by a broken promise chain
+  next.fire('click');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(stepped.length, 2);
+  assert.equal(stepped[1], 'flat2');
+});

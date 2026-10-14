@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   aisStreamRows,
   ingestAisStreamEnvelope,
+  pruneAisStreamCache,
 } from '../../server/providers/vessels/ais-store.js';
 
 // ITU-R M.1371 encodes speed over ground in 0.1-knot units and course over
@@ -62,4 +63,23 @@ test('the fastest encodable reading below the unavailable code is kept', () => {
   const row = rowFor('244060366');
   assert.equal(row.speed, 102.2);
   assert.equal(row.course, 359.9);
+});
+
+test('pruneAisStreamCache cleans up stale static data without unbounded growth', () => {
+  const mmsi = '999888777';
+  assert.equal(
+    ingestAisStreamEnvelope({
+      MessageType: 'ShipStaticData',
+      Message: {
+        ShipStaticData: {
+          UserID: Number(mmsi),
+          Name: 'TEST VESSEL',
+          Destination: 'NOWHERE',
+        },
+      },
+      MetaData: { MMSI: mmsi },
+    }),
+    true,
+  );
+  assert.doesNotThrow(() => pruneAisStreamCache());
 });

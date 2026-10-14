@@ -247,6 +247,39 @@ test('the limiter runs tasks in order and keeps going after a failure', async ()
   assert.equal(limiter.pending, 0);
 });
 
+test('the limiter detaches abort listener on task start and rejects pre-aborted signals immediately', async () => {
+  const limiter = createLimiter(1);
+  const controller = new AbortController();
+  let listenersCount = 0;
+  const originalAdd = controller.signal.addEventListener;
+  const originalRemove = controller.signal.removeEventListener;
+  controller.signal.addEventListener = function (...args) {
+    if (args[0] === 'abort') listenersCount++;
+    return originalAdd.apply(this, args);
+  };
+  controller.signal.removeEventListener = function (...args) {
+    if (args[0] === 'abort') listenersCount--;
+    return originalRemove.apply(this, args);
+  };
+
+  const res = await limiter.run(async () => 'ok', {
+    signal: controller.signal,
+  });
+  assert.equal(res, 'ok');
+  assert.equal(listenersCount, 0, 'abort listener was removed and not leaked');
+
+  // Pre-aborted signal
+  const abortedController = new AbortController();
+  abortedController.abort(new Error('already aborted'));
+  await assert.rejects(
+    limiter.run(async () => 'should not run', {
+      signal: abortedController.signal,
+    }),
+    /already aborted/,
+  );
+  assert.equal(limiter.pending, 0);
+});
+
 test('tiles, lookups and sequence pages queue separately, so a lookup never waits behind them', async () => {
   const running = { tile: 0, photo: 0, page: 0 };
   const peak = { tile: 0, photo: 0, page: 0 };
