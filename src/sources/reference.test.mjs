@@ -15,6 +15,7 @@ test('reference factories retain compatibility without starting acquisition or s
   assert.deepEqual(Object.keys(first), [
     'earthquakes',
     'fire-perimeters',
+    'sa-fire-incidents',
     'cables',
   ]);
   assert.notEqual(first.earthquakes, second.earthquakes);
@@ -22,6 +23,7 @@ test('reference factories retain compatibility without starting acquisition or s
   assert.notEqual(first.cables, second.cables);
   assert.equal(typeof first.earthquakes.getSnapshot, 'function');
   assert.equal(typeof first['fire-perimeters'].getSnapshot, 'function');
+  assert.equal(typeof first['sa-fire-incidents'].getSnapshot, 'function');
   assert.equal(typeof first.cables.fetch, 'function');
   assert.equal(requests, 0);
 });

@@ -1,5 +1,18 @@
 # Changelog
 
+- Add an SA Fire Incidents layer for South Australian CFS and MFS current
+  incidents and CFS public warnings. Markers are ground-clamped and coloured by
+  status and sized by level; warning areas draw on the globe and on 3D tiles.
+  The row shows the feed's last-updated time in Adelaide time, status counts and
+  CFS/MFS filter chips. The retired feed's HTML "File Unavailable" reply counts
+  as a failure and serves the last good data, and unavailable warnings are
+  reported as unavailable rather than as none. The feed is CC BY-NC-ND, so
+  commercial deployments must check its terms (see `DATA_SOURCES.md`).
+- GBFS v3 station names use English translations when available, then the first
+  usable translation or short name. Empty or malformed names no longer appear as
+  `[object Object]` or interrupt station loading; legacy string names remain
+  supported in the globe and bike-share tools. Thanks to
+  [Kristóf Kékesi](https://github.com/KristofKekesi) (#61).
 - Snow flakes sway within a fixed range instead of drifting sideways faster the
   longer the app runs; the Wind setting still scales the sway.
 
