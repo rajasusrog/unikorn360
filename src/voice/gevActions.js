@@ -4809,7 +4809,10 @@ function compactAnalystItem(r) {
     if (!present(r[key]) || key in compact) continue;
     if (spec.type === 'time') {
       const ms = Number(r[key]);
-      if (Number.isFinite(ms)) compact.time = new Date(ms).toISOString();
+      if (Number.isFinite(ms)) {
+        if (key === 'lastContactAtMs') compact.lastContactAtMs = ms;
+        else compact.time = new Date(ms).toISOString();
+      }
     } else compact[key] = r[key];
   }
   if (present(r.ageHours)) compact.ageHours = r.ageHours;
