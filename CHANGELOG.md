@@ -33,6 +33,8 @@
 
 - Director timeline seeks cross the dateline along the short longitude arc.
 
+- Conflicting CCTV direction tokens remain unknown within the highest matching tier, preserving travel-token precedence over street quadrants and bare words.
+
 - Treat explicitly current, complete empty vessel coverage as a successful update,
   clearing obsolete contacts while retaining stale or incomplete snapshots.
 
