@@ -15,6 +15,28 @@ import { satelliteClassColor } from '../../data/satelliteClass.js';
 
 export const ISS_NORAD = 25544;
 
+// Alpha-5 leader letters in order: A-Z skipping I and O, standing for 10-33
+// in the ten-thousands place of catalog numbers above 99999.
+const ALPHA5_LEADERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+/**
+ * NORAD catalog id from satellite.js's `satrec.satnum`.
+ *
+ * Five-digit fields pass through unchanged. Alpha-5 fields (a letter A-Z,
+ * skipping I and O, followed by four digits — e.g. `A0000` for 100000) decode
+ * the leader to 10-33 in the ten-thousands place. Anything else goes through
+ * `Number` exactly as before, so unparseable fields still yield `NaN`.
+ */
+export function noradIdFromSatnum(satnum) {
+  const text = String(satnum ?? '');
+  if (/^[A-HJ-NP-Z][0-9]{4}$/.test(text)) {
+    return (
+      (10 + ALPHA5_LEADERS.indexOf(text[0])) * 10000 + Number(text.slice(1))
+    );
+  }
+  return Number(text);
+}
+
 export const ISS_OVERLAY_SOURCE_ID = 'satellites-iss';
 
 export const ISS_OVERLAY_SOURCE_OPTIONS = Object.freeze({

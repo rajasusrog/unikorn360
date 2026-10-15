@@ -5,6 +5,7 @@ import {
   DENSE_GROUP_PATH,
   POINT_STYLES,
   DENSE_CREATE_CHUNK,
+  noradIdFromSatnum,
 } from './policy.js';
 
 export function createCatalog({ state: layerState, services, parts, source }) {
@@ -113,7 +114,7 @@ export function createCatalog({ state: layerState, services, parts, source }) {
           const entry = entries[i];
           const satrec = twoline2satrec(entry.line1, entry.line2);
           if (!satrec || satrec.error !== 0) continue;
-          const noradId = Number(satrec.satnum);
+          const noradId = noradIdFromSatnum(satrec.satnum);
           if (layerState._catalog.has(noradId)) continue; // core catalog keeps priority
           const pos = parts.orbits.propagatePosition(satrec, now);
           if (!pos) continue;
