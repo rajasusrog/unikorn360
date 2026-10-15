@@ -1,5 +1,8 @@
 import { createFrameRateMonitor } from './frameRateMonitor.js';
-import { bindApplicationShortcuts } from './visualInput.js';
+import {
+  bindApplicationShortcuts,
+  createGamepadNavigation,
+} from './visualInput.js';
 import { bindDisplayControls } from './displayControls.js';
 import { canonicalizeDensity } from '../data/detectionPolicy.js';
 
@@ -60,36 +63,42 @@ export class DisplayBindings {
       viewer: this.viewer,
       documentRef: document,
     });
+    const actions = {
+      setStyle: (style) => this.setStyle(style, { userInitiated: true }),
+      dismissSearch: () => {
+        if (this._locationSearch.classList.contains('expanded')) {
+          this._locationSearch.classList.remove('expanded');
+          this._locationSearch.value = '';
+          this._locationSearch.blur();
+        }
+      },
+      toggleHud: () => {
+        this.shareLinkManager?.claimRestoreLane?.('visual');
+        this.hud.toggle();
+        this._updateHudButtonState();
+        this._syncShareState();
+      },
+      toggleOrbit: () => this._toggleOrbit(),
+      toggleCleanView: () => this.toggleCleanView(),
+      toggleLayers: () =>
+        document.getElementById('data-panel').classList.toggle('active'),
+      cycleDetection: () => {
+        this.shareLinkManager?.claimRestoreLane?.('visual');
+        this.claimDetection();
+        cycleDetectionMode();
+        this._syncShareState();
+      },
+      toggleCctv: () => this._toggleCctvEnabled(),
+    };
     this._applicationShortcuts = bindApplicationShortcuts({
       documentRef: document,
       searchInput: this._locationSearch,
-      actions: {
-        setStyle: (style) => this.setStyle(style, { userInitiated: true }),
-        dismissSearch: () => {
-          if (this._locationSearch.classList.contains('expanded')) {
-            this._locationSearch.classList.remove('expanded');
-            this._locationSearch.value = '';
-            this._locationSearch.blur();
-          }
-        },
-        toggleHud: () => {
-          this.shareLinkManager?.claimRestoreLane?.('visual');
-          this.hud.toggle();
-          this._updateHudButtonState();
-          this._syncShareState();
-        },
-        toggleOrbit: () => this._toggleOrbit(),
-        toggleCleanView: () => this.toggleCleanView(),
-        toggleLayers: () =>
-          document.getElementById('data-panel').classList.toggle('active'),
-        cycleDetection: () => {
-          this.shareLinkManager?.claimRestoreLane?.('visual');
-          this.claimDetection();
-          cycleDetectionMode();
-          this._syncShareState();
-        },
-        toggleCctv: () => this._toggleCctvEnabled(),
-      },
+      actions,
+    });
+    this._gamepadNavigation?.destroy();
+    this._gamepadNavigation = createGamepadNavigation({
+      viewer: this.viewer,
+      actions,
     });
 
     this._displayControls?.destroy();
@@ -222,6 +231,8 @@ export class DisplayBindings {
   destroy() {
     this._applicationShortcuts?.destroy();
     this._applicationShortcuts = null;
+    this._gamepadNavigation?.destroy();
+    this._gamepadNavigation = null;
     this._frameRateMonitor?.destroy();
     this._frameRateMonitor = null;
     this._displayControls?.destroy();
