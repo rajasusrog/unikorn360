@@ -33,6 +33,8 @@
 
 - Director timeline seeks cross the dateline along the short longitude arc.
 
+- Boundary capability checks recover after unsuccessful or malformed status responses, using the existing retry backoff.
+
 - Treat explicitly current, complete empty vessel coverage as a successful update,
   clearing obsolete contacts while retaining stale or incomplete snapshots.
 
