@@ -138,6 +138,13 @@
 
 ## [Unreleased]
 
+- Refresh Norway's datacenters from a Geofabrik OpenStreetMap extract
+  (2026-10-05). Troll Housing joins the layer (4,352 features) and four
+  Norwegian sites pick up current OSM tags; no site moved or was removed.
+  `scripts/build-datacenters-norway.py` reproduces or `--verify`s the merge,
+  touching only features inside Geofabrik's Norway boundary, and the dataset
+  README records the extract, checksum and filter.
+
 - Street Level: KartaView is the third provider, keyless. Light its chip
   (purple; off by default, one provider at a time) and zoom in below about
   6 km: the lines are the streets KartaView has photos of (z13–14 tiles from
