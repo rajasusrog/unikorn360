@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { admitSameSiteRequest } from './localRequestGate.mjs';
+import {
+  admitSameSiteRequest,
+  parseTrustedProxyIps,
+  isTrustedProxyPeer,
+  hasProxySignals,
+} from './localRequestGate.mjs';
+import { admitKeySetupRequest } from './keySetupCore.mjs';
 
 const same = {
   hostHeader: 'localhost:4173',
@@ -105,3 +111,138 @@ test('a missing Host with a present Origin is refused (no authority to match)', 
 test('a foreign Host is refused when an Origin is present', () => {
   assert.equal(admitSameSiteRequest({ ...same, hostHeader: 'evil.example:4173' }).ok, false, 'foreign Host does not match local Origin');
 });
+
+test('parseTrustedProxyIps parses delimited IPs and handles IPv4-mapped IPv6', () => {
+  assert.equal(parseTrustedProxyIps('').size, 0);
+  assert.equal(parseTrustedProxyIps(null).size, 0);
+  assert.equal(parseTrustedProxyIps(undefined).size, 0);
+  assert.equal(parseTrustedProxyIps('   ').size, 0);
+
+  const parsed = parseTrustedProxyIps('127.0.0.1, 10.0.0.1  ::1, ::ffff:192.168.1.5');
+  assert.equal(parsed.has('127.0.0.1'), true);
+  assert.equal(parsed.has('10.0.0.1'), true);
+  assert.equal(parsed.has('::1'), true);
+  assert.equal(parsed.has('::ffff:192.168.1.5'), true);
+  assert.equal(parsed.has('192.168.1.5'), true);
+});
+
+test('isTrustedProxyPeer matches IPv4, IPv6, and IPv4-mapped IPv6 addresses', () => {
+  const allowlist = parseTrustedProxyIps('127.0.0.1, ::1');
+  assert.equal(isTrustedProxyPeer('127.0.0.1', allowlist), true);
+  assert.equal(isTrustedProxyPeer('::ffff:127.0.0.1', allowlist), true);
+  assert.equal(isTrustedProxyPeer('::1', allowlist), true);
+  assert.equal(isTrustedProxyPeer('10.0.0.1', allowlist), false);
+  assert.equal(isTrustedProxyPeer(undefined, allowlist), false);
+  assert.equal(isTrustedProxyPeer('127.0.0.1', new Set()), false);
+});
+
+test('hasProxySignals respects isTrustedProxy boundary', () => {
+  // Without trusted proxy: all proxy signals rejected
+  assert.equal(hasProxySignals({ 'x-forwarded-proto': 'https' }, { isTrustedProxy: false }), true);
+  assert.equal(hasProxySignals({ 'x-forwarded-for': '1.2.3.4' }, { isTrustedProxy: false }), true);
+
+  // With trusted proxy: single proto and single hop client IP allowed
+  assert.equal(hasProxySignals({ 'x-forwarded-proto': 'https', 'x-forwarded-for': '1.2.3.4' }, { isTrustedProxy: true }), false);
+  assert.equal(hasProxySignals({ 'x-forwarded-proto': 'http' }, { isTrustedProxy: true }), false);
+
+  // With trusted proxy: multi-hop / malformed proto rejected
+  assert.equal(hasProxySignals({ 'x-forwarded-proto': 'https, http' }, { isTrustedProxy: true }), true);
+  assert.equal(hasProxySignals({ 'x-forwarded-proto': 'ftp' }, { isTrustedProxy: true }), true);
+
+  // With trusted proxy: foreign proxy headers still rejected
+  for (const header of ['forwarded', 'via', 'cf-connecting-ip', 'cf-ray', 'x-real-ip', 'x-forwarded-host', 'x-forwarded-port']) {
+    assert.equal(hasProxySignals({ [header]: 'val' }, { isTrustedProxy: true }), true, `${header} must be rejected`);
+  }
+});
+
+// Acceptance contract test suite (Maintainer Issue #978 pinned cases)
+
+test('Acceptance Case 1: Untrusted peer with X-Forwarded-Proto is refused with 403', () => {
+  const r = admitSameSiteRequest({
+    hostHeader: 'example.com',
+    origin: 'https://example.com',
+    secFetchSite: 'same-origin',
+    proxyHeaders: { 'x-forwarded-proto': 'https' },
+    isTrustedProxy: false,
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 403);
+});
+
+test('Acceptance Case 2: Trusted peer with proto=https and matching Origin passes', () => {
+  const r = admitSameSiteRequest({
+    hostHeader: 'example.com',
+    protocol: 'http:',
+    origin: 'https://example.com',
+    secFetchSite: 'same-origin',
+    proxyHeaders: {
+      'x-forwarded-proto': 'https',
+      'x-forwarded-for': '203.0.113.195',
+    },
+    isTrustedProxy: true,
+  });
+  assert.equal(r.ok, true);
+});
+
+test('Acceptance Case 3: Trusted peer with foreign Origin is refused with 403', () => {
+  const r = admitSameSiteRequest({
+    hostHeader: 'example.com',
+    origin: 'https://evil.example',
+    secFetchSite: 'same-origin',
+    proxyHeaders: { 'x-forwarded-proto': 'https' },
+    isTrustedProxy: true,
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 403);
+});
+
+test('Acceptance Case 4: Trusted peer with Sec-Fetch-Site=cross-site is refused with 403', () => {
+  const r = admitSameSiteRequest({
+    hostHeader: 'example.com',
+    origin: 'https://example.com',
+    secFetchSite: 'cross-site',
+    proxyHeaders: { 'x-forwarded-proto': 'https' },
+    isTrustedProxy: true,
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 403);
+});
+
+test('Acceptance Case 5: Trusted peer with malformed/multi proto is refused with 403', () => {
+  const multi = admitSameSiteRequest({
+    hostHeader: 'example.com',
+    origin: 'https://example.com',
+    secFetchSite: 'same-origin',
+    proxyHeaders: { 'x-forwarded-proto': 'https, http' },
+    isTrustedProxy: true,
+  });
+  assert.equal(multi.ok, false);
+  assert.equal(multi.status, 403);
+
+  const invalid = admitSameSiteRequest({
+    hostHeader: 'example.com',
+    origin: 'https://example.com',
+    secFetchSite: 'same-origin',
+    proxyHeaders: { 'x-forwarded-proto': 'ws' },
+    isTrustedProxy: true,
+  });
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.status, 403);
+});
+
+test('Acceptance Case 6: Direct same-origin request is admitted unchanged', () => {
+  assert.equal(admitSameSiteRequest(same).ok, true);
+});
+
+test('Acceptance Case 7: Credential-panel proxied request remains refused', () => {
+  const r = admitKeySetupRequest({
+    method: 'GET',
+    remoteAddress: '127.0.0.1',
+    hostHeader: 'localhost:4173',
+    proxyHeaders: { 'x-forwarded-proto': 'https' },
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 403);
+  assert.equal(r.error, 'Provider Settings does not answer proxied requests');
+});
+
