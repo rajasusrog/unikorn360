@@ -33,6 +33,8 @@
 
 - Director timeline seeks cross the dateline along the short longitude arc.
 
+- Recent Imagery continues past malformed records in full catalog pages and respects the requested record limit.
+
 - Treat explicitly current, complete empty vessel coverage as a successful update,
   clearing obsolete contacts while retaining stale or incomplete snapshots.
 

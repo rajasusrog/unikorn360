@@ -40,6 +40,7 @@ export async function fetchCmrPages({
 }) {
   const granules = [];
   let hits = 0;
+  let readCount = 0;
   let cursor = null;
   for (;;) {
     const init = { signal };
@@ -47,19 +48,24 @@ export async function fetchCmrPages({
     const response = await fetchImpl(url, init);
     if (!response?.ok)
       throw new Error(`HTTP ${response?.status ?? 'error'} from CMR`);
-    const page = parseCmrUmm(await response.json(), product);
-    granules.push(...page.granules);
+    const json = await response.json();
+    const rawCount = Array.isArray(json?.items) ? json.items.length : 0;
+    const page = parseCmrUmm(json, product);
+    readCount += rawCount;
+    granules.push(
+      ...page.granules.slice(0, Math.max(0, maxRecords - granules.length)),
+    );
     hits = Math.max(hits, page.hits);
     cursor = response.headers?.get?.(CMR_SEARCH_AFTER) ?? null;
     if (
       !cursor ||
-      page.granules.length < CMR_PAGE_SIZE ||
-      granules.length >= maxRecords ||
-      granules.length >= hits
+      rawCount < CMR_PAGE_SIZE ||
+      readCount >= maxRecords ||
+      readCount >= hits
     )
       break;
   }
-  return { granules, truncated: hits > granules.length };
+  return { granules, truncated: hits > readCount };
 }
 
 function finiteOrNull(value) {
