@@ -33,6 +33,9 @@
 
 - Director timeline seeks cross the dateline along the short longitude arc.
 
+- Release superseded Google Street View open waits and suppress metadata
+  requests whose viewer was unmounted while the service loaded.
+
 - Treat explicitly current, complete empty vessel coverage as a successful update,
   clearing obsolete contacts while retaining stale or incomplete snapshots.
 
