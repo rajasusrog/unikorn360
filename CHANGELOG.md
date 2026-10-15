@@ -33,6 +33,9 @@
 
 - Director timeline seeks cross the dateline along the short longitude arc.
 
+- Exclude aircraft without a reported altitude from requested altitude bands;
+  unfiltered aircraft queries still retain them.
+
 - Treat explicitly current, complete empty vessel coverage as a successful update,
   clearing obsolete contacts while retaining stale or incomplete snapshots.
 
