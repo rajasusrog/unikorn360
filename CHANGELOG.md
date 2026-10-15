@@ -33,6 +33,8 @@
 
 - Director timeline seeks cross the dateline along the short longitude arc.
 
+- Keep cockpit cloud effects clear when a weather observation has no WMO code.
+
 - Treat explicitly current, complete empty vessel coverage as a successful update,
   clearing obsolete contacts while retaining stale or incomplete snapshots.
 
