@@ -36,6 +36,10 @@
 
 - Director timeline seeks cross the dateline along the short longitude arc.
 
+- Add Detroit (MoGo), Pittsburgh (POGOH), Aspen (WE-cycle) and Kona & Hilo
+  (HIBike) to the GBFS bikeshare registry, the layer's first stations in
+  Michigan.
+
 - Treat explicitly current, complete empty vessel coverage as a successful update,
   clearing obsolete contacts while retaining stale or incomplete snapshots.
 
