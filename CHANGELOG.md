@@ -33,6 +33,9 @@
 
 - Director timeline seeks cross the dateline along the short longitude arc.
 
+- Label camera-tool Street View fallbacks as historical Google imagery rather
+  than the current camera view; keep unknown frame provenance explicit.
+
 - Treat explicitly current, complete empty vessel coverage as a successful update,
   clearing obsolete contacts while retaining stale or incomplete snapshots.
 
