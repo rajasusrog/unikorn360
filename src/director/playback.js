@@ -53,6 +53,7 @@ export async function playSceneQueue(
   const cancelled = () => Boolean(token.cancelled || token.signal?.aborted);
   let activeScene = null;
   let completedShots = 0;
+  let runError = null;
   try {
     if (!queue.length || cancelled()) {
       return {
@@ -68,8 +69,9 @@ export async function playSceneQueue(
     for (let index = 0; index < queue.length && !cancelled(); index++) {
       const { scene, shot } = queue[index];
       if (activeScene && activeScene.id !== scene.id) {
-        await adapter.releaseScene(activeScene);
+        const toRelease = activeScene;
         activeScene = null;
+        await adapter.releaseScene(toRelease);
         if (cancelled()) break;
       }
       activeScene = scene;
@@ -82,8 +84,19 @@ export async function playSceneQueue(
     }
     if (!cancelled()) await adapter.complete?.();
     return { status: cancelled() ? 'cancelled' : 'completed', completedShots };
+  } catch (error) {
+    runError = error;
+    throw error;
   } finally {
-    if (releaseOnFinish && activeScene) await adapter.releaseScene(activeScene);
+    if (releaseOnFinish && activeScene) {
+      const toRelease = activeScene;
+      activeScene = null;
+      try {
+        await adapter.releaseScene(toRelease);
+      } catch (error) {
+        if (!runError) throw error;
+      }
+    }
   }
 }
 
