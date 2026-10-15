@@ -138,6 +138,11 @@
 
 ## [Unreleased]
 
+- Keep later satellites when a TLE catalog entry is missing an orbital line or
+  pairs lines with mismatched NORAD catalog numbers. The parser skips corrupt sets
+  and resumes at the next complete named set, instead of losing the rest of the
+  group (#906, #936).
+
 - Street Level: KartaView is the third provider, keyless. Light its chip
   (purple; off by default, one provider at a time) and zoom in below about
   6 km: the lines are the streets KartaView has photos of (z13–14 tiles from
